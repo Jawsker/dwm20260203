@@ -1,92 +1,113 @@
-<html>
-    <head>
-        <title>Pagina Principal</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>        
-    </head>
-    <body>
-        <!--Navbar -->
-        <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="index.php">Logo</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
-                    <span class="navbar-toggler-icon"></span>
-                </button> 
-                <div class="collapse navbar-collapse" id="collapsibleNavbar">
-                    <ul class="navbar-nav">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Empresa</a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="empresa.php">Quienes Somos</a></li>
-                                <li><a class="dropdown-item" href="#">Nuestro Equipo</a></li>
-                                <li><a class="dropdown-item" href="#">Mision</a></li>
-                            </ul>
-                        </li>                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="servicios.php">Servicios</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="productos.php">Productos</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="contacto.php">Contacto</a>
-                        </li>                           
-                    </ul>
-                </div>  
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#myModal">Acceder</button>                             
+<?php $page = 'inicio'; $titulo = 'Inicio'; include 'includes/header.php'; ?>
+
+<section class="lr-hero">
+    <span class="lr-wheat">🌾</span>
+    <div class="container position-relative">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <span class="lr-hero-eyebrow">100% sin gluten, horneado en Santiago</span>
+                <h1>Pan de verdad, sin que el gluten se interponga</h1>
+                <p class="lr-hero-lead">
+                    En Libre &amp; Rico horneamos panes, tortas y galletas para quienes viven con
+                    celiaquía o intolerancia al gluten, sin renunciar al sabor de lo recién hecho.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="productos.php" class="btn lr-btn-primary">Ver productos</a>
+                    <a href="contacto.php" class="btn lr-btn-ghost">Hacer un pedido</a>
+                </div>
             </div>
-        </nav>
-        <!--Container-->
-        <div class="container-fluid bg-warning">
-            <a href="empresa.php">Ir a Empresa</a><br>
-            <a href="servicios.php">Ir a Servicios</a><br>
-            <a href="productos.php">Ir a Producto</a><br>
-            <a href="Contacto.php">Ir a Contacto</a><br>
-        </div>
-        <!--Footer-->
-        <div class="container-fluid bg-dark">
-            <div class="row">
-                <div class="col-4"></div>
-                <div class="col-4" style="color:white"><strong>MiEmpresa@2026</strong></div>
-                <div class="col-4"></div>
+            <div class="col-lg-5 d-flex justify-content-center justify-content-lg-end">
+                <div class="lr-stamp">
+                    SELLO<br><strong>Sin Gluten</strong>Certificado
+                </div>
             </div>
         </div>
-        <!--Modal-->
-        <div class="modal fade" id="myModal">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <!-- Modal Header -->
-                    <div class="modal-header">
-                        <h4 class="modal-title">Autenticacion</h4>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <!-- Modal body -->
-                    <div class="modal-body">
-                        <form action="empresa.php">
-                            <div class="mb-3 mt-3">
-                                <label for="email" class="form-label">Email:</label>
-                                <input type="email" class="form-control" id="email" placeholder="Enter email" name="email">
-                            </div>
-                            <div class="mb-3">
-                                <label for="pwd" class="form-label">Password:</label>
-                                <input type="password" class="form-control" id="pwd" placeholder="Enter password" name="pswd">
-                            </div>
-                            <div class="form-check mb-3">
-                                <label class="form-check-label">
-                                <input class="form-check-input" type="checkbox" name="remember"> Remember me
-                                </label>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Login</button>
-                        </form>
-                    </div>
-                    <!-- Modal footer -->
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+    </div>
+</section>
+<div class="lr-torn"></div>
+
+<section class="lr-section">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="lr-valor-icono">🌿</div>
+                <h5>Ingredientes trazables</h5>
+                <p>Trabajamos solo con proveedores certificados sin gluten, sin contaminación cruzada en ningún paso.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="lr-valor-icono">🔥</div>
+                <h5>Horneado diario</h5>
+                <p>Nada se congela por semanas: horneamos cada mañana en lotes pequeños para que llegue fresco.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="lr-valor-icono">🚲</div>
+                <h5>Despacho en Santiago</h5>
+                <p>Entregamos en la mayoría de las comunas del Gran Santiago dentro de 24 a 48 horas.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="lr-section lr-section-kraft">
+    <div class="container">
+        <div class="lr-eyebrow-line">Lo más pedido</div>
+        <h2 class="mb-4">Nuestros favoritos de la semana</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="lr-card">
+                    <div class="lr-card-media">🥖</div>
+                    <div class="lr-card-body">
+                        <span class="lr-card-cat">Panes</span>
+                        <h5>Baguette rústica</h5>
+                        <p>Corteza crocante y miga suave, hecha con harina de arroz y almidón de maíz.</p>
+                        <span class="lr-price">$3.490</span>
                     </div>
                 </div>
             </div>
-        </div>        
-    </body>
-</html>
+            <div class="col-md-4">
+                <div class="lr-card">
+                    <div class="lr-card-media">🍫</div>
+                    <div class="lr-card-body">
+                        <span class="lr-card-cat">Pastelería</span>
+                        <h5>Torta de chocolate</h5>
+                        <p>Bizcocho húmedo de cacao con ganache, ideal para cumpleaños y celebraciones.</p>
+                        <span class="lr-price">$18.990</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="lr-card">
+                    <div class="lr-card-media">🍪</div>
+                    <div class="lr-card-body">
+                        <span class="lr-card-cat">Galletas</span>
+                        <h5>Galletas de avena sin gluten</h5>
+                        <p>Avena certificada, miel y pasas. Vienen en bolsas de 6 unidades.</p>
+                        <span class="lr-price">$4.290</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-5">
+            <a href="productos.php" class="btn lr-btn-primary">Ver todo el catálogo</a>
+        </div>
+    </div>
+</section>
+
+<section class="lr-section lr-section-ink">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <h2>"Después del diagnóstico de mi hija, encontrar pan de verdad fue un alivio."</h2>
+                <p class="mt-3" style="color:rgba(251,246,236,.78)">
+                    Este es el mensaje que más recibimos, y la razón por la que existe Libre &amp; Rico:
+                    que comer sin gluten no signifique renunciar a la mesa familiar.
+                </p>
+            </div>
+            <div class="col-lg-5 text-center">
+                <a href="empresa.php" class="btn lr-btn-outline">Conoce nuestra historia</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php include 'includes/footer.php'; ?>

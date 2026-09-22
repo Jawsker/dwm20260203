@@ -1,64 +1,66 @@
-<html>
-    <head>
-        <title>Pagina Principal</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>        
-    </head>
-    <body>
-        <!--Navbar -->
-        <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="index.php">Logo</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
-                    <span class="navbar-toggler-icon"></span>
-                </button> 
-                <div class="collapse navbar-collapse" id="collapsibleNavbar">
-                    <ul class="navbar-nav">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Empresa</a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="empresa.php">Quienes Somos</a></li>
-                                <li><a class="dropdown-item" href="#">Nuestro Equipo</a></li>
-                                <li><a class="dropdown-item" href="#">Mision</a></li>
-                            </ul>
-                        </li>                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="servicios.php">Servicios</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="productos.php">Productos</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="contacto.php">Contacto</a>
-                        </li>                     
-                    </ul>
-                </div>  
-                <button type="button" class="btn btn-outline-primary">Acceder</button>                             
+<?php $page = 'contacto'; $titulo = 'Contacto'; include 'includes/header.php'; ?>
+
+<div class="lr-toast" id="lrToast"></div>
+
+<section class="lr-section">
+    <div class="container">
+        <div class="lr-eyebrow-line">Hablemos</div>
+        <h1 class="mb-3">Contacto</h1>
+        <p class="mb-5" style="max-width:60ch">
+            Escríbenos para pedidos, cotizaciones de eventos o cualquier duda sobre nuestros
+            productos. Respondemos dentro de 24 horas hábiles.
+        </p>
+
+        <div class="row g-5">
+            <div class="col-lg-7">
+                <form id="formContacto" class="lr-form" novalidate>
+                    <div class="mb-3">
+                        <label for="contactoNombre" class="form-label">Nombre completo</label>
+                        <input type="text" class="form-control" id="contactoNombre" name="nombre" placeholder="Tu nombre">
+                        <div class="invalid-feedback">Cuéntanos cómo te llamas.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contactoEmail" class="form-label">Correo electrónico</label>
+                        <input type="email" class="form-control" id="contactoEmail" name="email" placeholder="tucorreo@ejemplo.cl">
+                        <div class="invalid-feedback">Ingresa un correo válido.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contactoMotivo" class="form-label">Motivo</label>
+                        <select class="form-select" id="contactoMotivo" name="motivo">
+                            <option value="" selected disabled>Selecciona una opción</option>
+                            <option value="pedido">Pedido personalizado</option>
+                            <option value="mayorista">Venta al por mayor</option>
+                            <option value="taller">Talleres</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                        <div class="invalid-feedback">Selecciona un motivo de contacto.</div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="contactoMensaje" class="form-label">Mensaje</label>
+                        <textarea class="form-control" id="contactoMensaje" name="mensaje" rows="5" placeholder="Cuéntanos qué necesitas..."></textarea>
+                        <div class="invalid-feedback">Escribe al menos 10 caracteres.</div>
+                    </div>
+                    <button type="submit" class="btn lr-btn-primary">Enviar mensaje</button>
+                </form>
             </div>
-        </nav>
-        <!--Container-->
-        <div class="container-fluid bg-warning">
-            <form action="empresa.php">
-                <div class="mb-2 mt-2">
-                    <label for="email" class="form-label">Email:</label>
-                    <input type="email" class="form-control" id="email" placeholder="Enter email" name="email">
-                </div>                
-                <label for="comment">Comentarios</label>
-                <textarea class="form-control" rows="5" id="comment" name="text"></textarea>
-                <button type="button" class="btn btn-outline-primary mt-1">Enviar</button>
-                <a href="index.php">Volver</a>
-            </form>
-        </div>
-        <!--Footer-->
-        <div class="container-fluid bg-dark">
-            <div class="row">
-                <div class="col-4"></div>
-                <div class="col-4" style="color:white"><strong>MiEmpresa@2026</strong></div>
-                <div class="col-4"></div>
+
+            <div class="col-lg-5">
+                <div class="lr-card h-100">
+                    <div class="lr-card-body">
+                        <h5 class="mb-3">Otras formas de contacto</h5>
+                        <p class="mb-1"><strong>Dirección</strong></p>
+                        <p class="text-muted">Av. Providencia 1234, Santiago</p>
+                        <p class="mb-1"><strong>Horario</strong></p>
+                        <p class="text-muted">Martes a sábado, 9:00 a 19:00</p>
+                        <p class="mb-1"><strong>Teléfono / WhatsApp</strong></p>
+                        <p class="text-muted">+56 9 1234 5678</p>
+                        <p class="mb-1"><strong>Correo</strong></p>
+                        <p class="text-muted mb-0">hola@libreyrico.cl</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <!--Modal-->
-    </body>
-</html>
+    </div>
+</section>
+
+<?php include 'includes/footer.php'; ?>
