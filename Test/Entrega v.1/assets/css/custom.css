@@ -1,0 +1,339 @@
+/* ============================================================
+   LIBRE & RICO — tema personalizado sobre Bootstrap 5.3.8
+   Paleta: papel kraft, trigo tostado, verde salvia, ladrillo
+   ============================================================ */
+
+:root{
+    /* Paleta monocromática personalizada — base #AA5439 (Paletton, tono 12°) */
+    --lr-cream:   #F7EEEB;   /* fondo general — base + 90% blanco */
+    --lr-kraft:   #E6CCC4;   /* fondo de secciones — base + 70% blanco */
+    --lr-gold:    #CC9888;   /* acento medio-claro — base + 40% blanco */
+    --lr-brick:   #AA5439;   /* color base — botones, precios, enlaces */
+    --lr-brick-dark:#88432E; /* base + 20% negro — hover */
+    --lr-green:   #4D2619;   /* base + 55% negro — usado en etiquetas/eyebrows */
+    --lr-ink:     #331911;   /* base + 70% negro — texto, navbar, footer */
+
+    /* Sobrescritura de variables de Bootstrap */
+    --bs-body-font-family: 'Work Sans', system-ui, sans-serif;
+    --bs-body-color: var(--lr-ink);
+    --bs-body-bg: var(--lr-cream);
+    --bs-primary: var(--lr-brick);
+    --bs-primary-rgb: 170,84,57;
+    --bs-link-color: var(--lr-brick);
+    --bs-link-hover-color: var(--lr-brick-dark);
+}
+
+::selection{ background: var(--lr-gold); color: var(--lr-ink); }
+
+body{
+    background-color: var(--lr-cream);
+}
+
+h1, h2, h3, h4, .lr-display{
+    font-family: 'Fraunces', Georgia, serif;
+    color: var(--lr-ink);
+    letter-spacing: -0.01em;
+}
+
+p, li{ max-width: 62ch; }
+
+a{ transition: color .15s ease; }
+
+/* Foco visible accesible en toda la app */
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{
+    outline: 3px solid var(--lr-gold);
+    outline-offset: 2px;
+}
+
+/* ---------- Navbar ---------- */
+.lr-navbar{
+    background: var(--lr-ink);
+    padding-top: .85rem;
+    padding-bottom: .85rem;
+    transition: padding .2s ease, box-shadow .2s ease;
+}
+.lr-navbar.lr-scrolled{
+    padding-top: .4rem;
+    padding-bottom: .4rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+}
+.lr-brand{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.4rem;
+    color: var(--lr-cream) !important;
+}
+.lr-brand-amp{ color: var(--lr-gold); font-style: italic; }
+.lr-navbar .nav-link{
+    color: rgba(251,246,236,.82);
+    font-weight: 500;
+    padding: .5rem .9rem;
+    border-radius: .4rem;
+}
+.lr-navbar .nav-link:hover{ color: var(--lr-cream); }
+.lr-navbar .nav-link.active{
+    color: var(--lr-ink);
+    background: var(--lr-gold);
+}
+.lr-navbar .dropdown-menu{
+    background: var(--lr-ink);
+    border: 1px solid rgba(251,246,236,.15);
+}
+.lr-navbar .dropdown-item{ color: rgba(251,246,236,.85); }
+.lr-navbar .dropdown-item:hover{ background: var(--lr-brick); color: var(--lr-cream); }
+
+.lr-btn-outline{
+    border: 1.5px solid var(--lr-gold);
+    color: var(--lr-gold);
+    border-radius: .4rem;
+    font-weight: 600;
+}
+.lr-btn-outline:hover{ background: var(--lr-gold); color: var(--lr-ink); }
+
+.lr-btn-primary{
+    background: var(--lr-brick);
+    border: none;
+    color: var(--lr-cream);
+    font-weight: 600;
+    border-radius: .4rem;
+    padding: .65rem 1.4rem;
+    transition: background .15s ease, transform .1s ease;
+}
+.lr-btn-primary:hover{ background: var(--lr-brick-dark); color: var(--lr-cream); }
+.lr-btn-primary:active{ transform: translateY(1px); }
+
+.lr-btn-ghost{
+    background: transparent;
+    border: 1.5px solid var(--lr-ink);
+    color: var(--lr-ink);
+    font-weight: 600;
+    border-radius: .4rem;
+    padding: .6rem 1.3rem;
+}
+.lr-btn-ghost:hover{ background: var(--lr-ink); color: var(--lr-cream); }
+
+/* ---------- Divisor de borde rasgado (efecto papel) ---------- */
+.lr-torn{
+    height: 26px;
+    width: 100%;
+    background: var(--lr-kraft);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='16' viewBox='0 0 40 16'%3E%3Cpath d='M0 16 L5 4 L10 14 L15 2 L20 12 L25 3 L30 15 L35 5 L40 16 Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='16' viewBox='0 0 40 16'%3E%3Cpath d='M0 16 L5 4 L10 14 L15 2 L20 12 L25 3 L30 15 L35 5 L40 16 Z'/%3E%3C/svg%3E");
+    -webkit-mask-repeat: repeat-x;
+    mask-repeat: repeat-x;
+    -webkit-mask-size: 40px 16px;
+    mask-size: 40px 16px;
+}
+
+/* ---------- Hero ---------- */
+.lr-hero{
+    background: var(--lr-kraft);
+    padding: 5rem 0 4.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.lr-hero-eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    color: var(--lr-green);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+.lr-hero h1{
+    font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+    line-height: 1.08;
+    max-width: 14ch;
+}
+.lr-hero-lead{
+    font-size: 1.15rem;
+    color: #4a3f2f;
+    max-width: 48ch;
+    margin: 1.1rem 0 1.8rem;
+}
+.lr-wheat{
+    position:absolute;
+    opacity:.18;
+    color: var(--lr-green);
+    font-size: 14rem;
+    right: -2rem;
+    top: -3rem;
+    transform: rotate(12deg);
+    pointer-events:none;
+    user-select:none;
+}
+
+/* Sello / stamp — usado con moderación, coherente con el rubro (sello de calidad) */
+.lr-stamp{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    width: 108px;
+    height: 108px;
+    border-radius: 50%;
+    border: 2px dashed var(--lr-green);
+    color: var(--lr-green);
+    transform: rotate(-9deg);
+    text-align:center;
+    font-weight: 700;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    line-height:1.25;
+    flex-shrink:0;
+}
+.lr-stamp strong{ font-family:'Fraunces', serif; font-size:1.05rem; display:block; }
+
+/* ---------- Tarjetas de producto ---------- */
+.lr-card{
+    background: var(--lr-cream);
+    border: 1px solid rgba(43,33,22,.1);
+    border-radius: .6rem;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.lr-card:hover{
+    transform: translateY(-4px);
+    box-shadow: 0 14px 30px rgba(43,33,22,.14);
+}
+.lr-card-media{
+    height: 150px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size: 3rem;
+    background: linear-gradient(135deg, var(--lr-kraft), var(--lr-cream));
+    border-bottom: 1px solid rgba(43,33,22,.08);
+}
+.lr-card-body{ padding: 1.15rem 1.25rem 1.4rem; }
+.lr-card-cat{
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--lr-green);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+.lr-card h5{ margin: .3rem 0 .4rem; font-family:'Fraunces', serif; }
+.lr-price{ color: var(--lr-brick); font-weight: 700; }
+
+/* ---------- Filtro de productos ---------- */
+.lr-filtros .btn{
+    border-radius: 999px;
+    border: 1.5px solid var(--lr-ink);
+    color: var(--lr-ink);
+    font-weight: 600;
+    font-size: .9rem;
+    padding: .4rem 1.1rem;
+    background: transparent;
+}
+.lr-filtros .btn.is-active,
+.lr-filtros .btn:hover{
+    background: var(--lr-ink);
+    color: var(--lr-cream);
+}
+.lr-hidden{ display:none !important; }
+
+/* ---------- Secciones genéricas ---------- */
+.lr-section{ padding: 4.5rem 0; }
+.lr-section-kraft{ background: var(--lr-kraft); }
+.lr-section-ink{ background: var(--lr-ink); color: var(--lr-cream); }
+.lr-section-ink h2{ color: var(--lr-cream); }
+.lr-eyebrow-line{
+    display:flex; align-items:center; gap:.75rem; margin-bottom:.75rem; color: var(--lr-green); font-weight:600;
+}
+.lr-eyebrow-line::after{ content:''; height:1px; flex:1; background: currentColor; opacity:.3; }
+
+/* ---------- Formularios ---------- */
+.lr-form .form-control,
+.lr-form .form-select{
+    border-radius: .45rem;
+    border: 1.5px solid rgba(43,33,22,.2);
+    padding: .65rem .85rem;
+}
+.lr-form .form-control:focus{
+    border-color: var(--lr-brick);
+    box-shadow: 0 0 0 .2rem rgba(168,70,47,.15);
+}
+.lr-form label{ font-weight: 600; margin-bottom:.3rem; }
+
+/* ---------- Equipo / valores ---------- */
+.lr-valor-icono{
+    width: 54px; height:54px;
+    border-radius: 50%;
+    background: var(--lr-kraft);
+    color: var(--lr-green);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+}
+.lr-avatar{
+    width: 76px; height:76px; border-radius:50%;
+    background: var(--lr-gold);
+    color: var(--lr-ink);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif; font-weight:700; font-size:1.3rem;
+}
+
+/* ---------- Footer ---------- */
+.lr-footer{
+    background: var(--lr-ink);
+    color: rgba(251,246,236,.75);
+    padding: 3.5rem 0 1.75rem;
+}
+.lr-brand-footer{ color: var(--lr-cream); margin-bottom:.6rem; }
+.lr-footer-text{ font-size:.92rem; }
+.lr-footer-heading{ color: var(--lr-cream); font-weight:700; margin-bottom:.85rem; }
+.lr-footer-links a{ color: rgba(251,246,236,.72); text-decoration:none; display:block; margin-bottom:.5rem; font-size:.92rem; }
+.lr-footer-links a:hover{ color: var(--lr-gold); }
+.lr-footer-rule{ border-color: rgba(251,246,236,.15); margin: 1.5rem 0 1.1rem; }
+.lr-footer-small{ font-size:.8rem; color: rgba(251,246,236,.55); }
+
+/* ---------- Botón volver arriba ---------- */
+.lr-back-top{
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    width: 46px; height:46px;
+    border-radius: 50%;
+    border: none;
+    background: var(--lr-brick);
+    color: var(--lr-cream);
+    font-size: 1.2rem;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 8px 20px rgba(43,33,22,.3);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 1030;
+}
+.lr-back-top.is-visible{ opacity:1; pointer-events:auto; transform: translateY(0); }
+
+/* ---------- Toast de confirmación ---------- */
+.lr-toast{
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 1080;
+    min-width: 260px;
+    background: var(--lr-green);
+    color: var(--lr-cream);
+    padding: .9rem 1.1rem;
+    border-radius: .5rem;
+    box-shadow: 0 12px 26px rgba(0,0,0,.2);
+    transform: translateX(120%);
+    transition: transform .25s ease;
+}
+.lr-toast.is-visible{ transform: translateX(0); }
+
+/* ---------- Utilidades de movimiento reducido ---------- */
+@media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+}
+
+@media (max-width: 767.98px){
+    .lr-hero{ padding: 3.2rem 0; text-align:center; }
+    .lr-wheat{ display:none; }
+    .lr-hero .d-flex.gap-3{ justify-content:center; }
+}
