@@ -6,6 +6,19 @@
 
 Libre & Rico es una panadería con venta web de retiro en tienda. La **carga proyectada** (supuesto declarado, no medido en producción): ~200 pedidos/día, pico ~30 pedidos/hora, ~20 clientes simultáneos, ~73 000 pedidos/año. Se evaluó (a) un servicio de **analítica separado** (almacén/ETL propio) y (b) **gRPC** para la comunicación interna.
 
+## Matriz de necesidades
+
+| Característica | Valor (proyección salvo indicación) | Implica |
+|---|---|---|
+| Volumen de datos | ~200 pedidos/día; ~73 000 pedidos/año; panel medido con **5 000** pedidos | una base transaccional basta; no hace falta almacén aparte |
+| Concurrencia | ~20 clientes simultáneos (proyección); **25 medidos** | no requiere escalar horizontalmente |
+| Tamaño de mensajes | < 5 KB por solicitud (cuerpo máximo por ruta en el gateway: pequeño) | sin necesidad de serialización binaria |
+| Frecuencia | pico ~30 pedidos/hora | una operación cada pocos minutos; sin tráfico interno masivo |
+| Latencia esperada | catálogo ≤ 300 ms, pedido/pago ≤ 800 ms, confirmación ≤ 1,5 s, panel ≤ 1 s (p95) | cumplido con holgura (ver abajo) |
+| Streaming | **no** hay flujo continuo; el front-end consulta el estado del pedido con GET | gRPC con streaming no se justifica |
+| Agregaciones | pedidos por estado, ventas pagadas, bajo stock | una consulta `$group` en `orders` |
+| Datos personales en analítica | no se usan: el panel muestra conteos y montos, no personas | sin necesidad de pseudonimización |
+
 ## Decisión
 
 1. **No se crea un servicio de analítica separado.** Las necesidades actuales (pedidos por estado, ventas pagadas, productos con bajo stock) se resuelven con **agregación en la base de `orders` (`$group`)** a través de GraphQL (`panelOperacion`).

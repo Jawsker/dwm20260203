@@ -1,0 +1,73 @@
+classDiagram
+    direction LR
+    class InventoryService {
+        <<service>>
+        +S01 consultarCatalogo(filtro) ProductoDTO[]
+        +S02 consultarProducto(id) ProductoDTO
+        +S21 listarInventario() ProductoInternoDTO[]
+        +S22 crearProducto(NuevoProductoDTO)
+        +S23 modificarProducto(id, cambios)
+        +S24 ajustarStock(id, stock)
+    }
+    class AuthService {
+        <<service>>
+        +S03 registrar(RegistroDTO)
+        +S04 iniciarSesion(CredencialesDTO)
+        +S05 cerrarSesion()
+        +S06 consultarSesion()
+        +S25 crearCuentaPersonal(CuentaDTO)
+    }
+    class ClientService {
+        <<service>>
+        +S07 consultarPerfil()
+        +S08 modificarPerfil(PerfilPatchDTO)
+        +S09 eliminarCuenta()
+        +S10 enviarContacto(ContactoDTO)
+        +S11 leerContactos()
+    }
+    class OrderService {
+        <<service>>
+        +S12 crearPedido(NuevoPedidoDTO)
+        +S13 consultarPedido(id) PedidoDTO
+        +S14 iniciarPago(id)
+        +S15 cancelarPedido(id)
+        +S16 avanzarEstado(id, estado)
+        +S26 expirarVencidos()
+    }
+    class PaymentService {
+        <<service>>
+        +S17 consultarPago(ref) PagoDTO
+        +S18 decidirSandbox(ref, resultado)
+        +S19 recibirWebhook(EventoDTO)
+    }
+    class GraphQLGateway {
+        <<service>>
+        +S20 pedidos · resumenPedido · yo · panelOperacion
+    }
+    class Usuario
+    class PerfilCliente
+    class MensajeContacto
+    class Producto
+    class Reserva
+    class Pedido
+    class LineaPedido
+    class Pago
+    class EventoWebhook
+    AuthService ..> Usuario : usa
+    ClientService ..> PerfilCliente : usa
+    ClientService ..> MensajeContacto : usa
+    InventoryService ..> Producto : usa
+    InventoryService ..> Reserva : usa
+    OrderService ..> Pedido : usa
+    OrderService ..> LineaPedido : usa
+    PaymentService ..> Pago : usa
+    PaymentService ..> EventoWebhook : usa
+    OrderService ..> InventoryService : reservar / confirmar / liberar
+    OrderService ..> PaymentService : abrir pago
+    PaymentService ..> OrderService : resultado de pago
+    GraphQLGateway ..> OrderService : lee
+    GraphQLGateway ..> InventoryService : lee
+    GraphQLGateway ..> ClientService : lee
+    Pedido "1" *-- "1..30" LineaPedido
+    Pedido "1" -- "0..*" Pago
+    Pago "1" -- "0..*" EventoWebhook
