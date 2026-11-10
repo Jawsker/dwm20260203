@@ -3,7 +3,7 @@ classDiagram
     class ApiGateway {
         +dispatch(request)
     }
-    class Route {
+    class RouteDefinition {
         +id : S01..S26
         +method
         +path
@@ -13,64 +13,74 @@ classDiagram
         +roles
         +rate
         +bodyMax
-        +query[]
         +forward[]
-        +identity : bool
-        +handler
         +cred : referencia simbólica
     }
-    class RouteTable {
-        +match(method, path) Route
+    class AuthenticationPolicy {
+        +introspect(cookie) Identity
     }
-    class RateLimiter {
+    class AuthorizationPolicy {
+        +permitido(role, route)
+    }
+    class RateLimitPolicy {
         +check(clase, ip)
-        ventana deslizante 60 s
     }
-    class BodyGuard {
+    class RequestGuardPolicy {
         +limitar tamaño
         +exigir application/json
-    }
-    class OriginGuard {
-        +verificar Origin/Referer
-    }
-    class SessionResolver {
-        +introspect(cookie) Identity
+        +verificar Origin
     }
     class Identity {
         +userId
         +role
     }
-    class RolePolicy {
-        +permitido(role, route)
-    }
-    class UpstreamClient {
-        +araw(servicio, ruta)
-        -edgeKey : secreto por arista
+    class ServiceTarget {
+        +nombre
+        +url interna
         +timeout
+    }
+    class SecretProvider {
+        +get(referencia, campo)
+        +TTL + último valor conocido
     }
     class FailureMapper {
         +504 timeout
         +503 sin conexión
         +502 error interno
     }
-    class Handler {
-        <<orquestación>>
-        register
-        login
-        logout
-        session
-        delete_account
+    class AuthService
+    class GraphQLGateway {
+        <<privado>>
+        +query depth 6 · alias 4 · tokens 600
+        +sin introspección
     }
-    ApiGateway --> RouteTable
-    RouteTable "1" o-- "26" Route
-    ApiGateway --> RateLimiter
-    ApiGateway --> BodyGuard
-    ApiGateway --> OriginGuard
-    ApiGateway --> SessionResolver
-    SessionResolver --> Identity
-    ApiGateway --> RolePolicy
-    RolePolicy ..> Identity
-    ApiGateway --> UpstreamClient
-    UpstreamClient --> FailureMapper
-    ApiGateway --> Handler
-    Handler --> UpstreamClient
+    class Schema {
+        +Query yo, pedidos, resumenPedido, panelOperacion
+        +sin Mutation
+    }
+    class Resolver {
+        +DataLoader por lote
+        +propaga Identity
+    }
+    class ServicioPrivado {
+        <<inventory · orders · clients · payments>>
+        +exige clave de arista
+        +re-verifica rol y propiedad
+    }
+    ApiGateway "1" o-- "1..*" RouteDefinition : tabla de rutas (26)
+    RouteDefinition "0..*" --> "1" AuthorizationPolicy : política de rol
+    RouteDefinition "0..*" --> "1" RateLimitPolicy : clase de límite
+    RouteDefinition "0..*" --> "1" ServiceTarget : destino
+    ApiGateway ..> RequestGuardPolicy
+    ApiGateway ..> AuthenticationPolicy
+    AuthenticationPolicy ..> AuthService : introspección
+    AuthenticationPolicy --> Identity : produce
+    ApiGateway ..> SecretProvider : clave de arista por destino
+    ApiGateway ..> FailureMapper
+    ServiceTarget "1" --> "1" ServicioPrivado : HTTP interno
+    ServiceTarget "0..1" --> "1" GraphQLGateway : ruta S20
+    GraphQLGateway "1" *-- "1" Schema
+    Schema "1" *-- "1..*" Resolver
+    Resolver ..> ServicioPrivado : llamadas con Identity
+    GraphQLGateway ..> SecretProvider
+    ServicioPrivado ..> SecretProvider : sus propias claves

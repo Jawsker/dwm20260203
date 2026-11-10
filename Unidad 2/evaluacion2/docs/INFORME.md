@@ -33,8 +33,9 @@
 
 * **Docker, Vault y MongoDB reales no se ejecutaron en el entorno de desarrollo** (el entorno no tenía demonio de Docker ni acceso para descargar los binarios). El `docker-compose.yml` fue validado sintácticamente con `docker compose config`. Todas las pruebas se ejecutaron con **procesos reales** de cada servicio, pero la base fue **mongomock en memoria** y el cliente de Vault se probó contra un **servidor Vault KV v2 falso**. Por tanto, la persistencia real y el arranque con contenedores están **sin probar**; deben comprobarse en la máquina de demostración con la lista del Módulo 10.
 * El proveedor de pagos es un **sandbox simulado** dentro de `payments` (no hay cuenta real); su protocolo de firma sí es el que se usaría con uno real.
+* **Diagramas:** se entregan en formato editable (Mermaid `.mmd`, texto) y como imagen `.png`, en `docs/diagramas/`.
 * El limitador de solicitudes es en memoria de proceso: válido para **una instancia** de gateway.
-* No se configuró TLS: en producción va un proxy con HTTPS y `LR_COOKIE_SECURE=1`.
+* **No se configuró TLS** (el enunciado lo pide para credenciales y datos restringidos): en producción va un proxy con HTTPS y `LR_COOKIE_SECURE=1`; está declarado como límite en el Módulo 10.
 * Las mediciones de carga son de un entorno de desarrollo (2 vCPU, base en memoria), no de producción.
 * Los usuarios y datos de prueba son **ficticios**; ninguna contraseña está en el repositorio (se generan en `deploy/.env`, que no se versiona).
 
@@ -118,6 +119,700 @@ Errores: `400 duplicate_items | validation_error` · `401` · `403` (rol no clie
 
 **S20 · `POST /api/v1/graphql`** — ver Módulo 8, con ejemplos reales de consulta y respuesta.
 
+## Ejemplo JSON de cada contrato (S01–S26)
+
+Cada operación se ejecutó contra el sistema con **datos ficticios**; abajo están las solicitudes y respuestas reales (cookies y firmas redactadas). Incluyen casos de error representativos (filtro inválido, credenciales inválidas, pedido ajeno, firma falsa). Se regeneran con `python scripts/ejemplos_contratos.py`.
+
+**Qué envía el navegador y qué decide el servidor:** el navegador envía solo ids y cantidades (S12), credenciales (S03/S04) y campos de perfil (S08). El servidor calcula precios, total y estados, fija el rol, fija el dueño del recurso (sale de la sesión, nunca de un parámetro) y decide si un pago está confirmado. Los precios, totales y estados de pago que un cliente intente enviar se ignoran (prueba `test_V6_*`).
+
+# Ejemplos reales de contratos S01–S26 (Módulo 1)
+
+Generado por `python scripts/ejemplos_contratos.py` ejecutando cada operación contra el stack local con **datos ficticios**. Ids, fechas y referencias son de esa ejecución; cookies y firmas se redactan.
+
+## S01 · `GET /api/v1/products?available=true&limit=2`
+
+Respuesta **200**:
+```json
+{
+  "items": [
+    {
+      "id": "p01",
+      "categoria": "panes",
+      "emoji": "🍞",
+      "nombre": "Pan de molde",
+      "descripcion": "Ideal para sándwiches, en formato de 500 g.",
+      "precio": 3190,
+      "disponible": true
+    },
+    {
+      "id": "p02",
+      "categoria": "panes",
+      "emoji": "🥖",
+      "nombre": "Baguette rústica",
+      "descripcion": "Corteza crocante, miga suave. Unidad de 250 g.",
+      "precio": 3490,
+      "disponible": true
+    }
+  ],
+  "total": 12,
+  "categorias": [
+    "panes",
+    "pasteleria",
+    "galletas",
+    "salados"
+  ]
+}
+```
+
+## S01 · `GET /api/v1/products?categoria=inexistente` — filtro inválido
+
+Respuesta **400**:
+```json
+{
+  "error": {
+    "code": "invalid_filter",
+    "message": "Categoría desconocida.",
+    "correlation_id": "9c2710f0ea81436c"
+  }
+}
+```
+
+## S02 · `GET /api/v1/products/p01`
+
+Respuesta **200**:
+```json
+{
+  "id": "p01",
+  "categoria": "panes",
+  "emoji": "🍞",
+  "nombre": "Pan de molde",
+  "descripcion": "Ideal para sándwiches, en formato de 500 g.",
+  "precio": 3190,
+  "disponible": true
+}
+```
+
+## S03 · `POST /api/v1/auth/register`
+
+Solicitud:
+```json
+{
+  "email": "cliente-b4de@ejemplo.cl",
+  "password": "Clave-ficticia-123",
+  "nombre": "Cliente Ficticio",
+  "telefono": "+56 9 1234 5678"
+}
+```
+Respuesta **201**:
+```json
+{
+  "user": {
+    "id": "u_24774c0819e0",
+    "email": "cliente-b4de@ejemplo.cl",
+    "role": "customer"
+  }
+}
+```
+
+## S04 · `POST /api/v1/auth/login` — credenciales inválidas
+
+Solicitud:
+```json
+{
+  "email": "ana@ejemplo.cl",
+  "password": "incorrecta-123"
+}
+```
+Respuesta **401**:
+```json
+{
+  "error": {
+    "code": "invalid_credentials",
+    "message": "Correo o contraseña incorrectos.",
+    "correlation_id": "89973e0a947a4850"
+  }
+}
+```
+
+## S05 · `POST /api/v1/auth/logout`
+
+Respuesta **204**:
+```json
+null
+```
+
+## S06 · `GET /api/v1/auth/session`
+
+Respuesta **200**:
+```json
+{
+  "user_id": "u_24774c0819e0",
+  "role": "customer",
+  "email": "cliente-b4de@ejemplo.cl"
+}
+```
+
+## S07 · `GET /api/v1/clients/me`
+
+Respuesta **200**:
+```json
+{
+  "id": "u_24774c0819e0",
+  "nombre": "Cliente Ficticio",
+  "telefono": "+56 9 1234 5678",
+  "direccion": null
+}
+```
+
+## S08 · `PUT /api/v1/clients/me`
+
+Solicitud:
+```json
+{
+  "direccion": "Calle Ficticia 123, Santiago"
+}
+```
+Respuesta **200**:
+```json
+{
+  "id": "u_24774c0819e0",
+  "nombre": "Cliente Ficticio",
+  "telefono": "+56 9 1234 5678",
+  "direccion": "Calle Ficticia 123, Santiago"
+}
+```
+
+## S09 · `DELETE /api/v1/account`
+
+Respuesta **204**:
+```json
+null
+```
+
+## S10 · `POST /api/v1/contact`
+
+Solicitud:
+```json
+{
+  "nombre": "Visitante Ficticio",
+  "correo": "visita@ejemplo.cl",
+  "mensaje": "¿Tienen pan sin gluten por encargo?"
+}
+```
+Respuesta **201**:
+```json
+{
+  "id": "4dcb5a347875",
+  "status": "nuevo"
+}
+```
+
+## S11 · `GET /api/v1/admin/contact?limit=2`
+
+Respuesta **200**:
+```json
+{
+  "items": [
+    {
+      "id": "4dcb5a347875",
+      "nombre": "Visitante Ficticio",
+      "correo": "visita@ejemplo.cl",
+      "mensaje": "¿Tienen pan sin gluten por encargo?",
+      "status": "nuevo",
+      "created_at": "2026-11-10T03:00:10Z"
+    }
+  ]
+}
+```
+
+## S12 · `POST /api/v1/orders`
+
+Cabeceras relevantes: `{"Idempotency-Key": "demo-0001"}`
+
+Solicitud:
+```json
+{
+  "items": [
+    {
+      "product_id": "p01",
+      "qty": 2
+    },
+    {
+      "product_id": "p03",
+      "qty": 1
+    }
+  ],
+  "notes": "retiro en la tarde"
+}
+```
+Respuesta **201**:
+```json
+{
+  "id": "LR-50E6A1E0",
+  "status": "awaiting_payment",
+  "total": 9370,
+  "currency": "CLP",
+  "created_at": "2026-11-10T03:00:10Z",
+  "expires_at": "2026-11-10T03:15:10Z",
+  "items": [
+    {
+      "product_id": "p01",
+      "nombre": "Pan de molde",
+      "qty": 2,
+      "unit_price": 3190,
+      "subtotal": 6380
+    },
+    {
+      "product_id": "p03",
+      "nombre": "Hallulla sin gluten",
+      "qty": 1,
+      "unit_price": 2990,
+      "subtotal": 2990
+    }
+  ],
+  "payment": {
+    "status": "none"
+  },
+  "refund_required": false,
+  "customer_id": "u_ana",
+  "notes": "retiro en la tarde"
+}
+```
+
+## S12 · `POST /api/v1/orders` — segundo pedido, para cancelar
+
+Solicitud:
+```json
+{
+  "items": [
+    {
+      "product_id": "p02",
+      "qty": 1
+    }
+  ]
+}
+```
+Respuesta **201**:
+```json
+{
+  "id": "LR-19A5F149",
+  "status": "awaiting_payment",
+  "total": 3490,
+  "currency": "CLP",
+  "created_at": "2026-11-10T03:00:11Z",
+  "expires_at": "2026-11-10T03:15:11Z",
+  "items": [
+    {
+      "product_id": "p02",
+      "nombre": "Baguette rústica",
+      "qty": 1,
+      "unit_price": 3490,
+      "subtotal": 3490
+    }
+  ],
+  "payment": {
+    "status": "none"
+  },
+  "refund_required": false,
+  "customer_id": "u_ana",
+  "notes": null
+}
+```
+
+## S13 · `GET /api/v1/orders/LR-50E6A1E0`
+
+Respuesta **200**:
+```json
+{
+  "id": "LR-50E6A1E0",
+  "status": "awaiting_payment",
+  "total": 9370,
+  "currency": "CLP",
+  "created_at": "2026-11-10T03:00:10Z",
+  "expires_at": "2026-11-10T03:15:10Z",
+  "items": [
+    {
+      "product_id": "p01",
+      "nombre": "Pan de molde",
+      "qty": 2,
+      "unit_price": 3190,
+      "subtotal": 6380
+    },
+    {
+      "product_id": "p03",
+      "nombre": "Hallulla sin gluten",
+      "qty": 1,
+      "unit_price": 2990,
+      "subtotal": 2990
+    }
+  ],
+  "payment": {
+    "status": "none"
+  },
+  "refund_required": false,
+  "customer_id": "u_ana",
+  "notes": "retiro en la tarde"
+}
+```
+
+## S13 · `GET /api/v1/orders/LR-50E6A1E0` — otro cliente → no ve datos
+
+Respuesta **404**:
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "Pedido no encontrado.",
+    "correlation_id": "85d982c2c4164e56"
+  }
+}
+```
+
+## S14 · `POST /api/v1/orders/LR-50E6A1E0/pay`
+
+Respuesta **200**:
+```json
+{
+  "order_id": "LR-50E6A1E0",
+  "payment_id": "pay_32c83965d844927f",
+  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "amount": 9370
+}
+```
+
+## S15 · `POST /api/v1/orders/LR-19A5F149/cancel`
+
+Respuesta **200**:
+```json
+{
+  "id": "LR-19A5F149",
+  "status": "cancelled",
+  "total": 3490,
+  "currency": "CLP",
+  "created_at": "2026-11-10T03:00:11Z",
+  "expires_at": "2026-11-10T03:15:11Z",
+  "items": [
+    {
+      "product_id": "p02",
+      "nombre": "Baguette rústica",
+      "qty": 1,
+      "unit_price": 3490,
+      "subtotal": 3490
+    }
+  ],
+  "payment": {
+    "status": "none"
+  },
+  "refund_required": false,
+  "customer_id": "u_ana",
+  "notes": null
+}
+```
+
+## S16 · `POST /api/v1/admin/orders/LR-50E6A1E0/status`
+
+Solicitud:
+```json
+{
+  "status": "preparing"
+}
+```
+Respuesta **200**:
+```json
+{
+  "id": "LR-50E6A1E0",
+  "status": "preparing",
+  "total": 9370,
+  "currency": "CLP",
+  "created_at": "2026-11-10T03:00:10Z",
+  "expires_at": "2026-11-10T03:15:10Z",
+  "items": [
+    {
+      "product_id": "p01",
+      "nombre": "Pan de molde",
+      "qty": 2,
+      "unit_price": 3190,
+      "subtotal": 6380
+    },
+    {
+      "product_id": "p03",
+      "nombre": "Hallulla sin gluten",
+      "qty": 1,
+      "unit_price": 2990,
+      "subtotal": 2990
+    }
+  ],
+  "payment": {
+    "status": "succeeded"
+  },
+  "refund_required": false,
+  "customer_id": "u_ana",
+  "notes": "retiro en la tarde"
+}
+```
+
+## S17 · `GET /api/v1/payments/sbx_n15zdgl0aAOdhbOCYDXnFg`
+
+Respuesta **200**:
+```json
+{
+  "payment_id": "pay_32c83965d844927f",
+  "order_id": "LR-50E6A1E0",
+  "amount": 9370,
+  "currency": "CLP",
+  "status": "pending"
+}
+```
+
+## S18 · `POST /api/v1/payments/sbx_n15zdgl0aAOdhbOCYDXnFg/sandbox-decision`
+
+Solicitud:
+```json
+{
+  "outcome": "approve"
+}
+```
+Respuesta **200**:
+```json
+{
+  "event_id": "evt_50aa4ae980bed08e",
+  "webhook_status": 200
+}
+```
+
+## S19 · `POST /api/v1/webhooks/payments` — evento ya procesado por la decisión sandbox, firma válida
+
+Cabeceras relevantes: `{"X-Provider-Signature": "t=<epoch>,v1=<hmac-sha256 redactado>"}`
+
+Solicitud:
+```json
+{
+  "event_id": "evt_demo_0f7efe",
+  "type": "payment.succeeded",
+  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "amount": 9370
+}
+```
+Respuesta **200**:
+```json
+{
+  "duplicate_payment": true
+}
+```
+
+## S19 · `POST /api/v1/webhooks/payments` — firma falsa
+
+Cabeceras relevantes: `{"X-Provider-Signature": "t=<epoch>,v1=firma-falsa"}`
+
+Solicitud:
+```json
+{
+  "event_id": "evt_demo_0f7efe",
+  "type": "payment.succeeded",
+  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "amount": 9370
+}
+```
+Respuesta **401**:
+```json
+{
+  "error": {
+    "code": "invalid_signature",
+    "message": "Firma del webhook inválida o vencida.",
+    "correlation_id": "7e05d9a5f7b841e9"
+  }
+}
+```
+
+## S20 · `POST /api/v1/graphql`
+
+Solicitud:
+```json
+{
+  "query": "query { pedidos(primeros: 1) { total items { id estado total lineas { nombre cantidad } } } }"
+}
+```
+Respuesta **200**:
+```json
+{
+  "data": {
+    "pedidos": {
+      "total": 1,
+      "items": [
+        {
+          "id": "LR-50E6A1E0",
+          "estado": "preparing",
+          "total": 9370,
+          "lineas": [
+            {
+              "nombre": "Pan de molde",
+              "cantidad": 2
+            },
+            {
+              "nombre": "Hallulla sin gluten",
+              "cantidad": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+## S21 · `GET /api/v1/admin/products?limit=2`
+
+Respuesta **200**:
+```json
+{
+  "items": [
+    {
+      "id": "p01",
+      "categoria": "panes",
+      "emoji": "🍞",
+      "nombre": "Pan de molde",
+      "descripcion": "Ideal para sándwiches, en formato de 500 g.",
+      "precio": 3190,
+      "disponible": true,
+      "stock": 18,
+      "reservado": 0,
+      "disponible_unidades": 18,
+      "activo": true
+    },
+    {
+      "id": "p02",
+      "categoria": "panes",
+      "emoji": "🥖",
+      "nombre": "Baguette rústica",
+      "descripcion": "Corteza crocante, miga suave. Unidad de 250 g.",
+      "precio": 3490,
+      "disponible": true,
+      "stock": 20,
+      "reservado": 0,
+      "disponible_unidades": 20,
+      "activo": true
+    }
+  ],
+  "total": 12,
+  "categorias": [
+    "panes",
+    "pasteleria",
+    "galletas",
+    "salados"
+  ]
+}
+```
+
+## S22 · `POST /api/v1/admin/products`
+
+Solicitud:
+```json
+{
+  "id": "pan-demo",
+  "categoria": "panes",
+  "emoji": "🍞",
+  "nombre": "Pan demo",
+  "descripcion": "Producto ficticio de ejemplo",
+  "precio": 2500,
+  "stock": 10
+}
+```
+Respuesta **201**:
+```json
+{
+  "id": "pan-demo",
+  "categoria": "panes",
+  "emoji": "🍞",
+  "nombre": "Pan demo",
+  "descripcion": "Producto ficticio de ejemplo",
+  "precio": 2500,
+  "disponible": true,
+  "stock": 10,
+  "reservado": 0,
+  "disponible_unidades": 10,
+  "activo": true
+}
+```
+
+## S23 · `PUT /api/v1/admin/products/pan-demo`
+
+Solicitud:
+```json
+{
+  "precio": 2700
+}
+```
+Respuesta **200**:
+```json
+{
+  "id": "pan-demo",
+  "categoria": "panes",
+  "emoji": "🍞",
+  "nombre": "Pan demo",
+  "descripcion": "Producto ficticio de ejemplo",
+  "precio": 2700,
+  "disponible": true,
+  "stock": 10,
+  "reservado": 0,
+  "disponible_unidades": 10,
+  "activo": true
+}
+```
+
+## S24 · `PUT /api/v1/admin/products/pan-demo/stock`
+
+Solicitud:
+```json
+{
+  "stock": 8
+}
+```
+Respuesta **200**:
+```json
+{
+  "id": "pan-demo",
+  "categoria": "panes",
+  "emoji": "🍞",
+  "nombre": "Pan demo",
+  "descripcion": "Producto ficticio de ejemplo",
+  "precio": 2700,
+  "disponible": true,
+  "stock": 8,
+  "reservado": 0,
+  "disponible_unidades": 8,
+  "activo": true
+}
+```
+
+## S25 · `POST /api/v1/admin/users`
+
+Solicitud:
+```json
+{
+  "email": "personal-8e77@libreyrico.test",
+  "password": "Clave-ficticia-123",
+  "role": "staff"
+}
+```
+Respuesta **201**:
+```json
+{
+  "user_id": "u_55a856f082a7",
+  "role": "staff"
+}
+```
+
+## S26 · `POST /api/v1/admin/maintenance/sweep`
+
+Respuesta **200**:
+```json
+{
+  "expired": 0,
+  "released_retried": 0,
+  "commits_retried": 0
+}
+```
+
 ---
 
 # Módulo 2 · Dominio, UML y reglas de negocio
@@ -155,6 +850,35 @@ Fuente editable: `docs/diagramas/dominio.mmd`. Cada entidad está marcada con el
 | RN10 | El stock físico no puede bajar de lo reservado | inventory | `test_stock_fisico_no_baja_de_lo_reservado` |
 | RN11 | Eliminar la cuenta borra perfil y credenciales y anonimiza pedidos | clients/auth/orders | `test_eliminar_cuenta_*` |
 
+## Servicios públicos y dependencias («service»)
+
+![Servicios públicos y dependencias](diagramas/servicios_publicos.png)
+
+Fuente editable: `docs/diagramas/servicios_publicos.mmd`.
+
+**Leyenda de notación.** `«service»` = servicio con las operaciones de la matriz del Módulo 1 (cada operación lleva su ID S01–S26). Línea con rombo lleno = composición; línea simple = asociación con multiplicidades; **flecha punteada = dependencia de uso** (el servicio usa la clase o a otro servicio; *no* significa relación entre registros de negocio). Los sufijos `DTO` son los objetos que cruzan la frontera hacia el navegador.
+
+**Correspondencia operación UML → ID de servicio:** `InventoryService`: S01 S02 S21 S22 S23 S24 · `AuthService`: S03 S04 S05 S06 S25 · `ClientService`: S07 S08 S09 S10 S11 · `OrderService`: S12 S13 S14 S15 S16 S26 · `PaymentService`: S17 S18 S19 · `GraphQLGateway`: S20. (S09 «eliminar cuenta» la orquesta el gateway: Auth + Clients + anonimización en Orders.)
+
+### Tabla de relaciones (origen → destino)
+
+| Origen | Destino | Multiplicidad (origen – destino) | Justificación |
+|---|---|---|---|
+| Usuario | Sesión | 1 – 0..* | varias sesiones simultáneas; cada una se revoca por separado |
+| Usuario | PerfilCliente | 1 – 0..1 | solo el rol cliente tiene perfil |
+| Usuario | Pedido | 1 – 0..* | un cliente puede tener muchos pedidos; al borrar la cuenta se anonimizan |
+| Pedido | LineaPedido | 1 – 1..30 (composición) | un pedido confirmado tiene al menos una línea; máximo 30 |
+| LineaPedido | Producto | 0..* – 1 | la línea copia nombre y precio; cambiar el precio después no altera pedidos |
+| Pedido | Reserva | 1 – 0..1 | una reserva por pedido, idempotente por `order_id` |
+| Pedido | Pago | 1 – 0..* | reintentos tras rechazo; como máximo un pago exitoso |
+| Pago | EventoWebhook | 1 – 0..* | un `event_id` solo se procesa una vez |
+
+### Decisiones del equipo
+
+* **Carrito y pedido son cosas distintas:** el carrito vive solo en el navegador (no se persiste ni cuenta como dato del servidor); el pedido nace en el servidor al confirmar, con al menos una línea. No se modela un «borrador vacío».
+* **Si un producto deja de estar disponible:** el historial se conserva, porque cada línea del pedido guarda una **copia** del nombre y precio. El producto solo se desactiva (`activo=false`), no se borra.
+* **Modelo interno vs DTO:** internamente se guardan, por ejemplo, `pwHash`, `intentosFallidos`, `tokenHash`, `stock` y `reservado`. Hacia el navegador salen solo los campos de cada DTO: el catálogo público no incluye stock exacto; el perfil no incluye credenciales; las respuestas de pedido ocultan la identidad al rol auditoría.
+
 ---
 
 # Módulo 3 · Matriz de sistemas, mapa de componentes y secuencia
@@ -186,6 +910,26 @@ La lista de aristas sale de `scripts/topology.py` (única fuente de verdad): de 
 ![Secuencia de compra](diagramas/secuencia_compra.png)
 
 Puntos de diseño visibles en la secuencia: (1) el navegador nunca envía precio ni estado; (2) `orders` obtiene los precios de `inventory` en el momento; (3) el monto del pago sale del pedido guardado; (4) el «pagado» llega por un evento firmado, verificado dos veces (firma/monto/duplicado en `payments`; monto otra vez en `orders`); (5) `commit` de la reserva descuenta el stock físico solo al confirmar.
+
+## Matriz de sistemas completa
+
+| Sistema | Responsabilidad | Datos bajo su autoridad | Servicios asociados | Dependencias | Contrato de integración | Credencial o identidad | Respuesta ante fallos |
+|---|---|---|---|---|---|---|---|
+| **inventory** | catálogo, precios vigentes, stock y reservas | productos, stock, reservas (**decide** la disponibilidad) | S01 S02 S21 S22 S23 S24 | ninguna | `POST /internal/products/batch`, `/reservations` (atómico), `/commit`, `/release` | `edge/orders__inventory`, `edge/gateway__inventory`, `edge/graphql__inventory`; `db/inventory` | si no responde: crear pedido da **503 controlado** (no se acepta sin reservar); el catálogo y la compra fallan sin afectar al resto del sitio (`test_inventory_caido_*`) |
+| **orders** | creación y ciclo de vida del pedido, reglas de transición, expiración | pedidos, líneas, historial de estados (**decide** el estado oficial) | S12 S13 S14 S15 S16 S26 | inventory, payments | REST interno; `payment-result` desde payments | `edge/gateway__orders`, `edge/payments__orders`, `edge/graphql__orders`, `edge/orders__*`; `db/orders` | si cae: 503 y se recupera al volver (`test_orders_caido_*`); `release_pending`/`commit_pending` se **reintentan** si inventory falló al liberar o confirmar; expiración periódica (`sweeper`) |
+| **clients** | registro de perfil y acceso autorizado a datos del cliente; mensajes de contacto | perfiles, mensajes | S07 S08 S09 S10 S11 | ninguna | REST interno; `batch` para GraphQL | `edge/gateway__clients`, `edge/graphql__clients`; `db/clients` | si cae: el perfil y el campo `cliente` de GraphQL fallan **de forma parcial**; compras y pagos siguen |
+| **payments** | inicio del pago, comprobación del resultado y relación con el proveedor | pagos, eventos de webhook (**decide** si un resultado es auténtico) | S17 S18 S19 | orders | `POST /internal/payments`; webhook firmado | `edge/gateway__payments`, `edge/orders__payments`, `payments/webhook` (HMAC); `db/payments` | un evento repetido se responde `duplicate` sin reprocesar; firma inválida → 401; si orders no responde, el pago vuelve a `pending`, se responde error y el proveedor puede **reintentar el mismo evento** (queda `received` y se reprocesa sin duplicar efectos) |
+| **auth** | cuentas, contraseñas, sesiones | usuarios y sesiones | S03 S04 S05 S06 S25 | ninguna | `introspect` (gateway) | `edge/gateway__auth`; `db/auth` | si cae: **falla cerrado** (401/503), nunca se concede acceso (`test_auth_caido_*`) |
+| **graphql** | agregación de lectura | ninguno (sin base) | S20 | orders, inventory, clients | queries internas con la identidad del usuario | `edge/gateway__graphql`, `edge/graphql__*` | errores **parciales** por campo; límite de tiempo por llamada |
+| **proveedor de pagos** | cobrar | datos de tarjeta (**nunca llegan al sistema**) | — | — | webhook firmado | secreto compartido en Vault | en esta entrega es un **sandbox simulado** dentro de `payments` (ver Módulo 10) |
+
+### Quién decide el estado oficial de cada recurso
+
+Producto y stock → **inventory**; pedido y su estado → **orders**; pago y autenticidad del evento → **payments**, pero solo **orders** puede cambiar el estado del pedido a «pagado» (y vuelve a comprobar el monto); identidad y rol → **auth**; perfil → **clients**.
+
+### Sistemas complementarios del caso (despacho, boletas, mensajería)
+
+El caso Libre & Rico opera con **retiro en tienda**: no hay despacho. Tampoco se implementan boletas electrónicas ni mensajería (correo/WhatsApp) automáticas: se declaran **fuera del alcance de esta entrega** y como mejora futura (un servicio de notificaciones que consuma el estado del pedido). Son proveedores externos, no servicios propios. El pago se integra con un proveedor externo representado por un adaptador de prueba.
 
 ---
 
@@ -238,6 +982,36 @@ Puntos de diseño visibles en la secuencia: (1) el navegador nunca envía precio
 
 **Defensa en profundidad:** el gateway filtra por rol (primera capa) y el servicio dueño **vuelve a verificar** rol y propiedad con la identidad que le llega firmada por clave de arista (segunda capa). Un servicio privado rechaza llamadas sin clave de arista (401) y descarta cualquier `X-Auth-User/Role` que no venga del gateway o de graphql.
 
+## Registro de stakeholders (partes interesadas)
+
+| Stakeholder | Interés | Rol asociado | Uso de información |
+|---|---|---|---|
+| Visitante | conocer y comparar productos | anónimo | catálogo público |
+| Cliente | comprar y seguir su pedido | `customer` | sus pedidos, su perfil |
+| Personal de tienda | preparar y entregar pedidos | `staff` | pedidos, stock, mensajes de contacto |
+| Administración | operar el negocio y el catálogo | `admin` | todo lo anterior + productos y cuentas |
+| Auditoría | supervisar sin intervenir | `auditor` | pedidos y panel, sin datos personales |
+| **Dueño/gerencia del negocio** | conocer ventas y estado operativo | **sin permisos operativos** | recibe la información a través del panel de operación de solo lectura (cuenta de auditoría) o de administración; no invoca servicios por sí mismo |
+| **Contabilidad / tributario** | conciliar ventas pagadas | **sin permisos operativos** | recibe el total de ventas pagadas del panel (`ventasPagadas`); los pedidos pagados se conservan aunque la cuenta del cliente se elimine (anonimizados) |
+| Proveedor de pagos | notificar resultados | identidad técnica (webhook firmado) | solo el evento de pago; no tiene sesión de usuario |
+| Equipo de operación (TI) | desplegar y rotar secretos | identidad técnica de infraestructura | claves de Vault; no lee secretos de otros servicios por política |
+
+## Dónde se verifica cada permiso
+
+| Capa | Qué verifica | Ejemplo |
+|---|---|---|
+| API Gateway | autenticación (sesión) y **rol** por ruta | `GET /admin/contact` con cliente → 403 sin llegar al servicio |
+| Servicio dueño | **rol otra vez** y **propiedad** del recurso | `GET /orders/{id}` de otro cliente → 404; auditoría sin identidad |
+| Entre servicios | identidad del servicio llamador | clave de arista; cabeceras de identidad solo desde gateway/graphql |
+
+La **identidad** (quién eres: sesión o clave de servicio) se separa de la **autorización** (qué puedes hacer: rol y propiedad). Ocultar un botón en el front-end no otorga ni quita permisos: la prueba `test_V3_*` ejecuta las operaciones de administración con roles sin permiso y recibe 403.
+
+## Criterios técnicos aplicados (verbos)
+
+* **GET** solo consulta; **POST** crea recursos o ejecuta acciones justificadas (cancelar, pagar, cambiar estado); **PUT** modifica un recurso ya existente (aquí actualiza los campos enviados, no reemplaza el documento completo; se documenta esa semántica y no se usa PATCH); **DELETE** solo en `/account` (el titular elimina sus datos).
+* **Anular un pedido no lo borra:** `POST /orders/{id}/cancel` cambia el estado a `cancelled`, libera el stock y conserva el registro y su `historial` de estados. No existe DELETE de pedidos ni de productos (un producto se desactiva con `activo=false`).
+* Una ruta con un verbo permitido **no** autoriza todas las rutas: cada ruta tiene su propia fila en la matriz.
+
 ---
 
 # Módulo 5 · API Gateway: UML y fronteras de confianza
@@ -273,6 +1047,46 @@ La cookie de sesión es `HttpOnly`, `SameSite=Lax`, `Path=/` y `Secure` cuando `
 | Webhook (Z0 → Z1 → payments) | evento del proveedor | firma HMAC-SHA256, tolerancia ±300 s, `event_id` único, monto exacto |
 
 **Sin ruta (líneas punteadas):** desde Z0 no hay camino a servicios privados, MongoDB ni Vault: en compose solo se publican los puertos 8000 (gateway) y 8080 (front-end); la red `private` es `internal: true`. La prueba `test_V5_acceso_directo_al_backend_sin_identidad` verifica que llamar directo a un servicio sin identidad/clave falla.
+
+## ¿Cuántos gateways y por qué?
+
+Se usan **dos piezas con roles distintos**, no varios gateways de borde:
+
+1. **Un API Gateway externo** (el único accesible desde Internet), con **políticas por clase de ruta** en una sola tabla: pública, con sesión, administrativa y webhook. Un solo equipo y una sola superficie de exposición no justifican separar el borde en varios gateways (más puertos, más configuración y más superficie que asegurar); las diferencias se resuelven con políticas (rol, límite, tamaño) por ruta.
+2. **Un GraphQL Gateway privado**, dentro de la red interna, solo alcanzable desde el API Gateway (ruta S20). Existe por una razón concreta: agregar datos de varios servicios con control de campos y límites propios de GraphQL, sin exponer esos servicios.
+
+## Clasificación de rutas
+
+| Clase | Ejemplos | Datos restringidos |
+|---|---|---|
+| Externa anónima | S01 S02 S03 S04 S10 S19 (webhook, autenticada por firma) | no (S03/S04/S10 reciben datos, no los devuelven a terceros) |
+| Externa autenticada | S05–S09 S12–S15 S17 S18 S20 | sí, solo para el titular |
+| Administrativa | S11 S16 S21–S26 | sí, según rol |
+| Interna | todas las `/internal/*` de los servicios; no existen en el gateway | — |
+
+Una ruta pública de red puede transportar datos restringidos para un usuario autorizado (por ejemplo S13 devuelve un pedido al dueño): «pública en red» no es «dato público».
+
+## Recorrido de una solicitud autorizada y una denegada
+
+**Autorizada — Ana crea un pedido (`POST /api/v1/orders`):** (1) el gateway busca la ruta S12 en la tabla; (2) aplica límite de frecuencia, tamaño y tipo JSON, y comprueba `Origin`; (3) pide a Auth que valide la cookie → `{user_id: u_ana, role: customer}`; (4) la política de rol permite `customer`; (5) descarta cabeceras de identidad del cliente, agrega la identidad verificada y la clave `edge/gateway__orders` obtenida de `SecretProvider`; (6) Orders re-verifica rol, pide precios a Inventory, reserva el stock y responde 201 con el total calculado.
+
+**Denegada (a) — rol insuficiente:** un cliente llama `GET /api/v1/admin/contact`. En el paso 4 la política de rol de la ruta S11 permite solo `staff` y `admin` → **403** sin que la solicitud llegue al servicio.
+
+**Denegada (b) — propiedad:** Beto llama `GET /api/v1/orders/{id de Ana}`. El gateway lo deja pasar (es un cliente con sesión), pero **Orders** comprueba que el pedido no es suyo y responde **404** sin datos (ejemplo real en el Módulo 1, S13).
+
+**Denegada (c) — acceso directo:** una llamada directa al puerto de un servicio privado sin clave de arista recibe **401** (`test_V5_*`); además en el despliegue ese puerto no está publicado.
+
+## Qué valida cada uno
+
+| Componente | Valida |
+|---|---|
+| API Gateway | ruta/verbo existentes, límite, tamaño, tipo, origen, sesión, rol; **no** conserva datos |
+| Cada servicio privado | clave de arista del llamador, identidad aceptada solo de gateway/graphql, rol y propiedad, validación de datos y reglas de negocio |
+| GraphQL Gateway | profundidad, alias y tokens de la consulta; delega la autorización de cada campo al servicio dueño |
+
+**Relaciones estructurales vs flujos de red:** en el UML las líneas continuas/rombos son relaciones estructurales (el gateway *tiene* una tabla de rutas, el esquema *se compone* de resolvers); las flechas punteadas son dependencias de comunicación (el gateway *llama* a Auth, los servicios *leen* secretos del `SecretProvider`). Las fronteras de red están en el segundo diagrama.
+
+**Rutas y secretos:** `RouteDefinition` solo guarda la **referencia simbólica** de la credencial; el valor lo entrega `SecretProvider` (Vault) en el momento. Políticas de rol, límites y destinos están separados de los secretos.
 
 ---
 
@@ -356,19 +1170,22 @@ Un único punto externo (`POST /api/v1/graphql`, S20) hacia el servicio `graphql
 
 # Módulo 7 · Datos sensibles, secretos de cliente y validaciones
 
-## Clasificación de datos
+## Matriz de datos y credenciales
 
-| Dato | Clasificación | Dueño | Dónde se guarda | Quién lo ve | Tratamiento |
-|---|---|---|---|---|---|
-| Contraseña | **Credencial** | Auth | solo hash Argon2id | nadie | nunca se devuelve ni se registra; comparación de tiempo constante |
-| Token de sesión | **Credencial** | Auth | SHA-256 del token (el original solo viaja en cookie `HttpOnly`) | el propio navegador (sin acceso por JS) | inactividad 30 min, absoluta 8 h, revocable |
-| Claves de arista, de BD, de webhook | **Secreto de sistema** | Vault | Vault KV v2 | cada servicio, solo las suyas | rotables; nunca en repositorio, imagen ni logs |
-| Correo, nombre, teléfono, dirección | **Dato personal restringido** | Auth/Clients | bases propias | el titular; personal (nombre/teléfono); admin (+dirección); auditoría: nada | minimización por rol; eliminación a solicitud |
-| Pedidos y pagos | **Dato comercial del cliente** | Orders/Payments | bases propias | dueño y personal/admin/auditoría | 404 ante pedido ajeno; anonimización al borrar cuenta |
-| Mensajes de contacto | **Dato personal** | Clients | base propia | solo personal/admin | límite de frecuencia y tamaño |
-| Catálogo y precios | **Público** | Inventory | base propia | todos | stock exacto solo para personal |
-| Stock exacto y reservas | **Interno** | Inventory | base propia | personal/admin | — |
-| Registros (logs) | **Operacional** | cada servicio | salida estándar | operación | JSON con redacción de claves sensibles y sin cuerpos de solicitud (`test_los_logs_no_contienen_*`) |
+| Dato o credencial | Finalidad | Clasificación | Sistema custodio | Roles autorizados | Representación en el front-end | Protección | Retención |
+|---|---|---|---|---|---|---|---|
+| Contraseña | autenticar | **Credencial** | Auth (solo hash Argon2id con sal) | nadie la lee | campo `password`, se vacía tras enviar; nunca se muestra | hash adaptativo, comparación de tiempo constante, no se devuelve ni se registra | mientras exista la cuenta; se borra al eliminarla |
+| Token de sesión | mantener la sesión | **Credencial** | Auth (SHA-256 del token) | el propio navegador (cookie `HttpOnly`, ilegible por JS) | no existe en JS ni en `localStorage` | inactividad 30 min, absoluta 8 h, revocable al cerrar sesión o eliminar cuenta | hasta expirar o revocar |
+| Correo | identificar y contactar | **Dato personal** | Auth | titular; personal/admin/auditoría solo lo ven como identidad en sesión propia | solo en el menú de cuenta del titular | HTTPS (proxy), no en logs | mientras exista la cuenta |
+| Nombre, teléfono | coordinar retiro | **Dato personal restringido** | Clients | titular; personal (nombre y teléfono); admin | perfil propio; panel de operación para personal | mínimo por rol; fuera de logs | hasta que el titular elimine su cuenta |
+| Dirección | datos de contacto del cliente | **Dato personal restringido** | Clients | titular; admin (no personal ni auditoría) | solo en «Mi perfil» y en el panel de admin | mínimo por rol; fuera de logs | hasta que el titular elimine su cuenta |
+| Pedidos y montos | compra y seguimiento | **Dato comercial del cliente** | Orders | dueño; personal/admin; auditoría sin identidad | «Mis pedidos» (propios), panel de operación | 404 ante pedido ajeno; anonimización al eliminar cuenta | se **conservan** anonimizados (fines contables) |
+| Pagos y referencia del proveedor | cobro | **Dato comercial** | Payments | dueño del pago | referencia mostrada solo en la pantalla de pago | monto verificado en servidor; firma de eventos | se conservan con el pedido |
+| Mensaje de contacto | atender consultas | **Dato personal** | Clients | personal/admin | formulario (solo envío) | límite de frecuencia y de tamaño | **sin purga automática implementada** (brecha declarada: debería definirse un plazo) |
+| Catálogo y precios | vender | **Público** | Inventory | todos | catálogo | solo campos permitidos | permanente |
+| Stock exacto y reservas | operación | **Interno** | Inventory | personal/admin | panel de inventario | rol exigido en servidor | permanente |
+| Claves de arista, de base de datos y de webhook | autenticar sistemas | **Secreto de integración** | Vault | cada servicio solo las suyas | **nunca** llegan al navegador | política de solo lectura por servicio; rotables | rotación (ver Módulo 6) |
+| Registros (logs) | operación y diagnóstico | **Operacional** | cada servicio (salida estándar) | operación | — | JSON con redacción de claves sensibles; sin cuerpos de solicitud ni credenciales (`test_los_logs_*`) | la define la plataforma de despliegue |
 
 ## Decisión: ¿se custodian secretos del cliente?
 
@@ -432,6 +1249,11 @@ Las pruebas **V1–V6** son las validaciones pedidas para este módulo; el resto
 
 Pruebas de navegador (Playwright contra el front-end real): ver `docs/evidencia/resultados-navegador.json` y las capturas en `docs/evidencia/capturas/`.
 
+
+**Control antes de entregar:** se buscó que no haya secretos en JavaScript, HTML, capturas ni ejemplos (búsqueda de claves y contraseñas en el repositorio y en `docs/`); los ejemplos usan datos ficticios y las contraseñas de prueba se generan en `deploy/.env`, que no se versiona. Se devuelven solo los campos mínimos por rol (ver Módulo 8).
+
+**Token de pago / clave publicable:** el sandbox no usa token de tarjeta ni clave publicable en el navegador; con un proveedor real se debería usar su token de pago del lado del cliente (clasificación: identificador no secreto, alcance de un solo pago) y mantener la clave secreta solo en `payments`.
+
 ---
 
 # Módulo 8 · Servicios privados y GraphQL
@@ -445,6 +1267,23 @@ Pruebas de navegador (Playwright contra el front-end real): ver `docs/evidencia/
 | mongo, vault | no | solo desde servicios con credenciales propias |
 
 En `deploy/docker-compose.yml` solo se publican `8000` y `8080` (front-end). La red `private` es `internal: true`.
+
+## Mapa de clasificación de servicios
+
+| Servicio | Naturaleza | Responsabilidad | Datos propios | Contrato | Dependencias | Justificación de la separación |
+|---|---|---|---|---|---|---|
+| gateway | borde (público) | controles de entrada y enrutamiento | ninguno | REST externo `/api/v1` | auth, todos | una sola puerta que se endurece una vez |
+| auth | transaccional, privado | identidad y sesiones | usuarios, sesiones | REST interno | — | las credenciales se aíslan del resto de los datos |
+| clients | transaccional, privado | datos personales y contacto | perfiles, mensajes | REST interno | — | datos personales con su propia base y rol de acceso |
+| inventory | transaccional, privado | catálogo y stock | productos, reservas | REST interno | — | el stock necesita operaciones atómicas propias |
+| orders | transaccional, privado | pedidos y estados | pedidos | REST interno | inventory, payments | es la autoridad del estado del pedido |
+| payments | transaccional, privado | pagos y eventos del proveedor | pagos, eventos | REST interno + webhook | orders | aísla la integración con el proveedor y su secreto |
+| graphql | **agregación**, privado | lectura combinada | ninguno | GraphQL interno | orders, inventory, clients | evita que el front-end haga varias llamadas y no toca bases ajenas |
+| vault, mongo | infraestructura | secretos y persistencia | secretos / datos | — | — | inaccesibles desde Internet |
+
+**Analítica y alta demanda:** no hay servicio de analítica ni de alta demanda separado (decisión en el Módulo 9).
+
+**Cohesión y acoplamiento:** cada servicio modifica solo sus datos; las colaboraciones son por contratos REST explícitos (aristas de `topology.py`). La agregación **no accede a bases de otros servicios**: solo llama a sus APIs.
 
 ## Esquema GraphQL (resumen)
 
@@ -708,6 +1547,19 @@ query { panelOperacion { pedidosPorEstado { estado cantidad } ventasPagadas prod
 
 Libre & Rico es una panadería con venta web de retiro en tienda. La **carga proyectada** (supuesto declarado, no medido en producción): ~200 pedidos/día, pico ~30 pedidos/hora, ~20 clientes simultáneos, ~73 000 pedidos/año. Se evaluó (a) un servicio de **analítica separado** (almacén/ETL propio) y (b) **gRPC** para la comunicación interna.
 
+## Matriz de necesidades
+
+| Característica | Valor (proyección salvo indicación) | Implica |
+|---|---|---|
+| Volumen de datos | ~200 pedidos/día; ~73 000 pedidos/año; panel medido con **5 000** pedidos | una base transaccional basta; no hace falta almacén aparte |
+| Concurrencia | ~20 clientes simultáneos (proyección); **25 medidos** | no requiere escalar horizontalmente |
+| Tamaño de mensajes | < 5 KB por solicitud (cuerpo máximo por ruta en el gateway: pequeño) | sin necesidad de serialización binaria |
+| Frecuencia | pico ~30 pedidos/hora | una operación cada pocos minutos; sin tráfico interno masivo |
+| Latencia esperada | catálogo ≤ 300 ms, pedido/pago ≤ 800 ms, confirmación ≤ 1,5 s, panel ≤ 1 s (p95) | cumplido con holgura (ver abajo) |
+| Streaming | **no** hay flujo continuo; el front-end consulta el estado del pedido con GET | gRPC con streaming no se justifica |
+| Agregaciones | pedidos por estado, ventas pagadas, bajo stock | una consulta `$group` en `orders` |
+| Datos personales en analítica | no se usan: el panel muestra conteos y montos, no personas | sin necesidad de pseudonimización |
+
 ## Decisión
 
 1. **No se crea un servicio de analítica separado.** Las necesidades actuales (pedidos por estado, ventas pagadas, productos con bajo stock) se resuelven con **agregación en la base de `orders` (`$group`)** a través de GraphQL (`panelOperacion`).
@@ -855,3 +1707,30 @@ Esto **no se ejecutó** en el entorno de desarrollo; es lo que debe verificarse 
 * **Salud:** cada servicio expone `/health` (vivo) y `/ready` (base y dependencias).
 * **Rotación de un secreto:** borrar su ruta en Vault y volver a ejecutar `bootstrap`; reiniciar los servicios implicados.
 * **Registros:** JSON por salida estándar con `correlation_id` para seguir una solicitud entre servicios.
+
+## Guion de demostración de los flujos principales (≈5 minutos)
+
+1. **Visitante:** abrir el sitio → catálogo cargado desde el API (S01) → filtrar por categoría.
+2. **Registro e ingreso:** «Acceder» → crear cuenta → el menú muestra el rol (S03, S06).
+3. **Compra:** agregar productos → «Confirmar y pagar» → el **total lo calcula el servidor** (S12). Mostrar en las herramientas del navegador que la solicitud solo lleva ids y cantidades.
+4. **Pago:** pantalla de pago → «Aprobar» (sandbox) → el pedido pasa a **Pagado** por el webhook firmado (S14, S18, S19).
+5. **Mis pedidos (GraphQL):** historial con productos vigentes en una sola consulta (S20).
+6. **Seguridad:** con otra cuenta pedir el pedido anterior → 404 sin datos; con el cliente intentar `admin.php` → aviso y 403 en la API.
+7. **Personal:** entrar como `tienda@libreyrico.test` → avanzar el pedido a «En preparación» (S16), ajustar stock (S24).
+8. **Auditoría:** entrar como `auditoria@libreyrico.test` → panel sin datos personales (error parcial en bajo stock, esperado).
+
+Evidencia equivalente ya capturada: `docs/evidencia/capturas/` y `resultados-navegador.json`.
+
+## Flujos complementarios y alcance
+
+* **Despacho, boletas y mensajería:** no aplican al caso (retiro en tienda) y no se implementan; ver Módulo 3.
+* **Restricciones tecnológicas del curso:** se mantienen PHP + Bootstrap + JavaScript en el front-end; el backend usa Python/FastAPI, MongoDB y Vault.
+* **Persistencia, esquema y datos de prueba:** MongoDB real en el despliegue (volumen `mongo-data`); los servicios crean sus **índices al arrancar** (colecciones sin esquema fijo; la validación está en el servicio); los datos de prueba se crean con `LR_SEED=1` (productos de `catalogo.json` y 5 usuarios ficticios). Dependencias con **versiones fijadas** en `backend/requirements.txt`; variables en `deploy/.env.example` sin valores reales.
+* **Pruebas gRPC/analíticas:** no aplican (ver ADR del Módulo 9).
+
+## Límites declarados de esta entrega
+
+* **TLS:** las comunicaciones del entorno de desarrollo y del compose van en HTTP dentro de la red privada; el enunciado pide TLS para credenciales y datos restringidos. En producción debe ir un proxy con HTTPS delante del gateway (`LR_COOKIE_SECURE=1`) y TLS/mTLS entre servicios; **no está implementado ni probado** aquí.
+* **Docker, Vault y MongoDB reales:** no se ejecutaron en el entorno de desarrollo (ver portada y lista de comprobación); las pruebas usan procesos reales de cada servicio con base en memoria y un Vault simulado.
+* **Proveedor de pagos:** adaptador de prueba que conserva contrato, autenticación (firma) y transiciones, como pide el enunciado.
+* **Retención de mensajes de contacto:** sin purga automática (Módulo 7).

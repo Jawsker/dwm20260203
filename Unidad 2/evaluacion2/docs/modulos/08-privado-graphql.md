@@ -10,6 +10,23 @@
 
 En `deploy/docker-compose.yml` solo se publican `8000` y `8080` (front-end). La red `private` es `internal: true`.
 
+## Mapa de clasificación de servicios
+
+| Servicio | Naturaleza | Responsabilidad | Datos propios | Contrato | Dependencias | Justificación de la separación |
+|---|---|---|---|---|---|---|
+| gateway | borde (público) | controles de entrada y enrutamiento | ninguno | REST externo `/api/v1` | auth, todos | una sola puerta que se endurece una vez |
+| auth | transaccional, privado | identidad y sesiones | usuarios, sesiones | REST interno | — | las credenciales se aíslan del resto de los datos |
+| clients | transaccional, privado | datos personales y contacto | perfiles, mensajes | REST interno | — | datos personales con su propia base y rol de acceso |
+| inventory | transaccional, privado | catálogo y stock | productos, reservas | REST interno | — | el stock necesita operaciones atómicas propias |
+| orders | transaccional, privado | pedidos y estados | pedidos | REST interno | inventory, payments | es la autoridad del estado del pedido |
+| payments | transaccional, privado | pagos y eventos del proveedor | pagos, eventos | REST interno + webhook | orders | aísla la integración con el proveedor y su secreto |
+| graphql | **agregación**, privado | lectura combinada | ninguno | GraphQL interno | orders, inventory, clients | evita que el front-end haga varias llamadas y no toca bases ajenas |
+| vault, mongo | infraestructura | secretos y persistencia | secretos / datos | — | — | inaccesibles desde Internet |
+
+**Analítica y alta demanda:** no hay servicio de analítica ni de alta demanda separado (decisión en el Módulo 9).
+
+**Cohesión y acoplamiento:** cada servicio modifica solo sus datos; las colaboraciones son por contratos REST explícitos (aristas de `topology.py`). La agregación **no accede a bases de otros servicios**: solo llama a sus APIs.
+
 ## Esquema GraphQL (resumen)
 
 ```graphql

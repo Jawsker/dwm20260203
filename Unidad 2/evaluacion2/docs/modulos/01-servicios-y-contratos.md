@@ -48,3 +48,11 @@ Errores: `400 duplicate_items | validation_error` · `401` · `403` (rol no clie
 **S19 · `POST /api/v1/webhooks/payments`** (lo llama el proveedor) — cabecera `X-Provider-Signature: t=<epoch>,v1=<hmac-sha256(secreto, "<t>." + cuerpo)>`; cuerpo `{"event_id","type","provider_ref","amount"}`. Respuestas: `200 processed|duplicate|ignored`, `401 invalid_signature`, `400 amount_mismatch`.
 
 **S20 · `POST /api/v1/graphql`** — ver Módulo 8, con ejemplos reales de consulta y respuesta.
+
+## Ejemplo JSON de cada contrato (S01–S26)
+
+Cada operación se ejecutó contra el sistema con **datos ficticios**; abajo están las solicitudes y respuestas reales (cookies y firmas redactadas). Incluyen casos de error representativos (filtro inválido, credenciales inválidas, pedido ajeno, firma falsa). Se regeneran con `python scripts/ejemplos_contratos.py`.
+
+**Qué envía el navegador y qué decide el servidor:** el navegador envía solo ids y cantidades (S12), credenciales (S03/S04) y campos de perfil (S08). El servidor calcula precios, total y estados, fija el rol, fija el dueño del recurso (sale de la sesión, nunca de un parámetro) y decide si un pago está confirmado. Los precios, totales y estados de pago que un cliente intente enviar se ignoran (prueba `test_V6_*`).
+
+{{incluir:evidencia/ejemplos-contratos.md}}

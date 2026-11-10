@@ -33,7 +33,8 @@
 
 * **Docker, Vault y MongoDB reales no se ejecutaron en el entorno de desarrollo** (el entorno no tenía demonio de Docker ni acceso para descargar los binarios). El `docker-compose.yml` fue validado sintácticamente con `docker compose config`. Todas las pruebas se ejecutaron con **procesos reales** de cada servicio, pero la base fue **mongomock en memoria** y el cliente de Vault se probó contra un **servidor Vault KV v2 falso**. Por tanto, la persistencia real y el arranque con contenedores están **sin probar**; deben comprobarse en la máquina de demostración con la lista del Módulo 10.
 * El proveedor de pagos es un **sandbox simulado** dentro de `payments` (no hay cuenta real); su protocolo de firma sí es el que se usaría con uno real.
+* **Diagramas:** se entregan en formato editable (Mermaid `.mmd`, texto) y como imagen `.png`, en `docs/diagramas/`.
 * El limitador de solicitudes es en memoria de proceso: válido para **una instancia** de gateway.
-* No se configuró TLS: en producción va un proxy con HTTPS y `LR_COOKIE_SECURE=1`.
+* **No se configuró TLS** (el enunciado lo pide para credenciales y datos restringidos): en producción va un proxy con HTTPS y `LR_COOKIE_SECURE=1`; está declarado como límite en el Módulo 10.
 * Las mediciones de carga son de un entorno de desarrollo (2 vCPU, base en memoria), no de producción.
 * Los usuarios y datos de prueba son **ficticios**; ninguna contraseña está en el repositorio (se generan en `deploy/.env`, que no se versiona).
