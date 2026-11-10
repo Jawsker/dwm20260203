@@ -1,0 +1,43 @@
+flowchart LR
+    B([Navegador]) -->|HTTP :8080| F[Frontend PHP + JS]
+    B ==>|HTTPS :8000 cookie HttpOnly| GW
+    subgraph PUB[Red pública]
+        F
+        GW[API Gateway]
+    end
+    subgraph PRIV[Red privada interna - sin salida a Internet]
+        AUTH[Auth Service]
+        CLI[Clients]
+        INV[Inventory]
+        ORD[Orders]
+        PAY[Payments]
+        GQL[GraphQL Gateway]
+        V[(Vault)]
+        M1[(auth DB)]
+        M2[(clients DB)]
+        M3[(inventory DB)]
+        M4[(orders DB)]
+        M5[(payments DB)]
+    end
+    GW -->|edge gateway→auth| AUTH
+    GW -->|edge gateway→clients| CLI
+    GW -->|edge gateway→inventory| INV
+    GW -->|edge gateway→orders| ORD
+    GW -->|edge gateway→payments| PAY
+    GW -->|edge gateway→graphql| GQL
+    GQL -->|edge graphql→orders| ORD
+    GQL -->|edge graphql→inventory| INV
+    GQL -->|edge graphql→clients| CLI
+    ORD -->|edge orders→inventory| INV
+    ORD -->|edge orders→payments| PAY
+    PAY -->|edge payments→orders| ORD
+    PAY -. "webhook firmado (simula al proveedor)" .-> GW
+    AUTH --- M1
+    CLI --- M2
+    INV --- M3
+    ORD --- M4
+    PAY --- M5
+    V -. "token + política por servicio (solo lectura)" .- AUTH
+    V -.- GW
+    V -.- ORD
+    V -.- PAY

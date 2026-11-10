@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    actor C as Cliente (navegador)
+    participant GW as API Gateway
+    participant A as Auth
+    participant O as Orders
+    participant I as Inventory
+    participant P as Payments
+    C->>GW: POST /api/v1/orders {items:[{product_id, qty}]} + cookie
+    GW->>A: introspect(token)
+    A-->>GW: {user_id, role:customer}
+    GW->>O: POST /internal/orders (edge + X-Auth-User/Role)
+    O->>I: POST /products/batch (precios vigentes)
+    I-->>O: nombre, precio
+    O->>I: POST /reservations {order_id, items} (atómico)
+    I-->>O: reserva activa
+    O-->>GW: 201 pedido awaiting_payment (total del servidor)
+    GW-->>C: 201
+    C->>GW: POST /orders/{id}/pay
+    GW->>O: pay (identidad verificada)
+    O->>P: POST /payments {order_id, user_id, amount del pedido guardado}
+    P-->>O: payment_id, provider_ref
+    O-->>C: provider_ref (vía gateway)
+    C->>GW: POST /payments/{ref}/sandbox-decision {approve}
+    GW->>P: decide (dueño del pago)
+    P->>GW: POST /webhooks/payments (evento firmado HMAC)
+    GW->>P: reenvía bytes + firma
+    P->>P: verifica firma, tolerancia, event_id único, monto
+    P->>O: payment-result {succeeded, amount}
+    O->>O: awaiting_payment → paid (transición atómica)
+    O->>I: commit reserva (stock físico)
+    O-->>P: ok
+    P-->>GW: 200 processed
+    C->>GW: GET /orders/{id}
+    GW-->>C: status = paid

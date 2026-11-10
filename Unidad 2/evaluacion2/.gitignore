@@ -1,0 +1,7 @@
+.local-logs/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+*.local.json
+deploy/.env

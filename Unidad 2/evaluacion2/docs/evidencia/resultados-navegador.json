@@ -1,0 +1,102 @@
+[
+  {
+    "prueba": "P01 catálogo muestra 12 productos desde la API",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P01 total del pedido en pantalla",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P02 sin sesión se abre el modal de acceso",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P02 registro crea sesión (menú de cuenta visible)",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "Cookie de sesión HttpOnly y no legible por JS",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P03 pantalla de pago muestra total calculado por el servidor",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P03 pago aprobado se confirma por webhook y el pedido queda 'Pagado'",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P04 Mis pedidos (GraphQL) lista el pedido pagado con productos",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P04 el perfil se carga desde clients",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "Cliente en /admin.php ve aviso y ningún dato del panel",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "Cliente llamando a la API de administración recibe 403",
+    "resultado": "OK",
+    "detalle": "403"
+  },
+  {
+    "prueba": "P05 personal ve pedidos con nombre del cliente",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P05 personal avanza el pedido a 'En preparación'",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P05 inventario muestra stock y reservas",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P05 auditoría no ve nombres de clientes ni botones de acción",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "P05 auditoría no ve pestañas de inventario/mensajes",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "Móvil 360 px catálogo sin desborde horizontal",
+    "resultado": "OK",
+    "detalle": "0"
+  },
+  {
+    "prueba": "Contacto envía el mensaje a la API (toast de éxito)",
+    "resultado": "OK",
+    "detalle": ""
+  },
+  {
+    "prueba": "Móvil 360 px contacto sin desborde horizontal",
+    "resultado": "OK",
+    "detalle": "0"
+  },
+  {
+    "prueba": "Sin errores de JavaScript en consola",
+    "resultado": "OK",
+    "detalle": ""
+  }
+]

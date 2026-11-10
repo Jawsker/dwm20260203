@@ -1,0 +1,91 @@
+classDiagram
+    direction LR
+    class Usuario {
+        <<Auth>>
+        +id
+        +email
+        +pwHash (Argon2id)
+        +rol: customer|staff|admin|auditor
+        +estado
+        +intentosFallidos
+    }
+    class Sesion {
+        <<Auth>>
+        +tokenHash (SHA-256)
+        +userId
+        +expiraAbsoluta
+        +ultimoUso
+    }
+    class PerfilCliente {
+        <<Clients>>
+        +id = Usuario.id
+        +nombre
+        +telefono
+        +direccion
+    }
+    class MensajeContacto {
+        <<Clients>>
+        +id
+        +nombre
+        +correo
+        +mensaje
+    }
+    class Producto {
+        <<Inventory>>
+        +id
+        +categoria
+        +nombre
+        +descripcion
+        +precio (CLP entero)
+        +stock
+        +reservado
+        +disponible
+        +activo
+    }
+    class Reserva {
+        <<Inventory>>
+        +orderId
+        +items: producto→cantidad
+        +estado: active|released|committed
+    }
+    class Pedido {
+        <<Orders>>
+        +id (LR-XXXXXXXX)
+        +userId
+        +total (calculado en servidor)
+        +estado
+        +expiraEn
+        +notas
+        +historial
+    }
+    class LineaPedido {
+        <<Orders>>
+        +productoId
+        +nombre (copia)
+        +precioUnitario (copia)
+        +cantidad 1..20
+        +subtotal
+    }
+    class Pago {
+        <<Payments>>
+        +id
+        +orderId
+        +userId
+        +monto
+        +estado: pending|succeeded|failed
+        +providerRef
+    }
+    class EventoWebhook {
+        <<Payments>>
+        +eventId (único)
+        +estado: received|processed|rejected
+    }
+    Usuario "1" -- "0..*" Sesion : abre
+    Usuario "1" -- "0..1" PerfilCliente : solo rol customer
+    Usuario "1" -- "0..*" Pedido : realiza (customer)
+    Pedido "1" *-- "1..30" LineaPedido : contiene
+    LineaPedido "0..*" --> "1" Producto : referencia
+    Pedido "1" -- "0..1" Reserva : reserva stock
+    Reserva "0..*" --> "1..*" Producto : descuenta
+    Pedido "1" -- "0..*" Pago : intentos (máx. 1 exitoso)
+    Pago "1" -- "0..*" EventoWebhook : notificaciones

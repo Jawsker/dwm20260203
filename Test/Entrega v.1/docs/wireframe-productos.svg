@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <title>Wireframe anotado — Catálogo y pedido (Libre &amp; Rico)</title>
+  <rect width="1400" height="820" fill="#ffffff"/>
+  <text x="20" y="30" font-size="20" font-weight="700" fill="#331911">Wireframe anotado · Catálogo y pedido · Libre &amp; Rico</text>
+  <text x="20" y="50" fill="#6b5a52">Tres decisiones de layout para el mismo flujo: consultar catálogo → filtrar → agregar al pedido → confirmar</text>
+
+  <!-- ===== ESCRITORIO (≥1200px) ===== -->
+  <text x="20" y="84" font-weight="700" fill="#AA5439">ESCRITORIO · ≥1200px · 12 columnas</text>
+  <rect x="20" y="94" width="700" height="470" fill="#F7EEEB" stroke="#331911" stroke-width="2"/>
+  <rect x="20" y="94" width="700" height="28" fill="#331911"/>
+  <text x="32" y="113" fill="#F7EEEB" font-size="12" font-weight="700">Libre &amp; Rico</text><text x="708" y="113" fill="#F7EEEB" font-size="12" text-anchor="end">Inicio · Empresa · Servicios · Productos · Contacto</text>
+  <text x="36" y="148" font-weight="700" font-size="15" fill="#331911">Arma tu pedido sin gluten</text>
+  <!-- filtros + buscador -->
+  <g fill="none" stroke="#331911"><rect x="36" y="160" width="46" height="20" rx="10"/><rect x="88" y="160" width="46" height="20" rx="10"/><rect x="140" y="160" width="62" height="20" rx="10"/><rect x="208" y="160" width="52" height="20" rx="10"/><rect x="266" y="160" width="76" height="20" rx="10"/><rect x="400" y="160" width="108" height="20" rx="10"/></g>
+  <text x="46" y="174" font-size="10">Todos</text><text x="410" y="174" font-size="10" fill="#6b5a52">Buscar…</text>
+  <!-- catálogo: 3 col × 2 filas -->
+  <g fill="#E6CCC4" stroke="#331911">
+    <rect x="36" y="196" width="150" height="150"/><rect x="196" y="196" width="150" height="150"/><rect x="356" y="196" width="150" height="150"/>
+    <rect x="36" y="358" width="150" height="150"/><rect x="196" y="358" width="150" height="150"/><rect x="356" y="358" width="150" height="150"/>
+  </g>
+  <g fill="#F7EEEB" stroke="#331911" stroke-dasharray="3 3"><rect x="44" y="204" width="134" height="62"/><rect x="204" y="204" width="134" height="62"/><rect x="364" y="204" width="134" height="62"/><rect x="44" y="366" width="134" height="62"/><rect x="204" y="366" width="134" height="62"/><rect x="364" y="366" width="134" height="62"/></g>
+  <g font-size="10" fill="#331911"><text x="46" y="292">Nombre + descripción</text><text x="206" y="292">Nombre + descripción</text><text x="366" y="292">Nombre + descripción</text><text x="46" y="454">Nombre + descripción</text><text x="206" y="454">Nombre + descripción</text><text x="366" y="454">Nombre + descripción</text></g>
+  <g font-size="10" fill="#AA5439" font-weight="700"><text x="46" y="334">$ precio</text><text x="206" y="334">$ precio</text><text x="366" y="334">$ precio</text><text x="46" y="496">$ precio</text><text x="206" y="496">$ precio</text><text x="366" y="496">$ precio</text></g>
+  <g fill="#AA5439"><rect x="120" y="322" width="58" height="16" rx="3"/><rect x="280" y="322" width="58" height="16" rx="3"/><rect x="440" y="322" width="58" height="16" rx="3"/><rect x="120" y="484" width="58" height="16" rx="3"/><rect x="280" y="484" width="58" height="16" rx="3"/><rect x="440" y="484" width="58" height="16" rx="3"/></g>
+  <!-- pedido -->
+  <rect x="522" y="160" width="186" height="190" fill="#ffffff" stroke="#331911" stroke-width="2"/>
+  <text x="532" y="180" font-weight="700">Tu pedido            [3 u.]</text>
+  <g stroke="#331911" stroke-dasharray="2 3"><line x1="532" y1="196" x2="698" y2="196"/><line x1="532" y1="224" x2="698" y2="224"/><line x1="532" y1="252" x2="698" y2="252"/></g>
+  <text x="532" y="212" font-size="10">Pan de molde  [−] 2 [+]  $6.380  ✕</text>
+  <text x="532" y="240" font-size="10">Brownie       [−] 1 [+]  $1.990  ✕</text>
+  <text x="532" y="296" font-weight="700">Total                  $8.370</text>
+  <rect x="532" y="312" width="166" height="26" fill="#AA5439"/><text x="574" y="329" fill="#F7EEEB" font-weight="700" font-size="12">Confirmar pedido</text>
+  <!-- marcadores -->
+
+  <g fill="#B3261E" font-weight="700" font-size="14"><text x="722" y="184">①</text><text x="156" y="190">②</text><text x="720" y="344">③</text><text x="350" y="156">④</text></g>
+
+  <!-- ===== TABLET (768–991px) ===== -->
+  <text x="760" y="84" font-weight="700" fill="#AA5439">TABLET · 768–991px · apilado</text>
+  <rect x="760" y="94" width="260" height="470" fill="#F7EEEB" stroke="#331911" stroke-width="2"/>
+  <rect x="760" y="94" width="260" height="22" fill="#331911"/><text x="768" y="109" fill="#F7EEEB" font-size="10">Libre &amp; Rico              ☰</text>
+  <text x="770" y="136" font-weight="700" font-size="12">Arma tu pedido sin gluten</text>
+  <g fill="none" stroke="#331911"><rect x="770" y="146" width="40" height="16" rx="8"/><rect x="815" y="146" width="40" height="16" rx="8"/><rect x="860" y="146" width="52" height="16" rx="8"/></g>
+  <rect x="770" y="168" width="240" height="16" rx="8" fill="none" stroke="#331911"/>
+  <g fill="#E6CCC4" stroke="#331911"><rect x="770" y="194" width="114" height="100"/><rect x="896" y="194" width="114" height="100"/><rect x="770" y="302" width="114" height="100"/><rect x="896" y="302" width="114" height="100"/></g>
+  <text x="790" y="350" font-size="10">2 columnas</text>
+  <rect x="770" y="414" width="240" height="140" fill="#ffffff" stroke="#331911" stroke-width="2"/>
+  <text x="780" y="434" font-weight="700" font-size="12">Tu pedido [3 u.]</text><text x="780" y="456" font-size="10">líneas · total</text>
+  <rect x="780" y="520" width="220" height="24" fill="#AA5439"/><text x="840" y="536" fill="#F7EEEB" font-size="11" font-weight="700">Confirmar pedido</text>
+  <text x="790" y="580" font-size="10" fill="#6b5a52">[Ver pedido (n)] flotante, abajo-izq.</text>
+  <text x="1000" y="150" font-size="14" fill="#B3261E" font-weight="700">⑤</text>
+
+  <!-- ===== MÓVIL (<576px) ===== -->
+  <text x="1070" y="84" font-weight="700" fill="#AA5439">MÓVIL · &lt;576px · 1 columna</text>
+  <rect x="1070" y="94" width="150" height="470" fill="#F7EEEB" stroke="#331911" stroke-width="2"/>
+  <rect x="1070" y="94" width="150" height="20" fill="#331911"/><text x="1076" y="108" fill="#F7EEEB" font-size="9">Libre &amp; Rico        ☰</text>
+  <text x="1078" y="132" font-weight="700" font-size="10">Arma tu pedido</text>
+  <g fill="none" stroke="#331911"><rect x="1078" y="140" width="34" height="14" rx="7"/><rect x="1116" y="140" width="34" height="14" rx="7"/><rect x="1154" y="140" width="34" height="14" rx="7"/></g>
+  <text x="1192" y="151" font-size="12" fill="#6b5a52">›</text>
+  <rect x="1078" y="160" width="134" height="14" rx="7" fill="none" stroke="#331911"/>
+  <g fill="#E6CCC4" stroke="#331911"><rect x="1078" y="182" width="134" height="86"/><rect x="1078" y="276" width="134" height="86"/></g>
+  <text x="1090" y="228" font-size="10">tarjeta 1 col</text>
+  <rect x="1078" y="372" width="134" height="100" fill="#ffffff" stroke="#331911" stroke-width="2"/><text x="1086" y="392" font-size="10" font-weight="700">Tu pedido</text>
+  <rect x="1078" y="440" width="134" height="22" fill="#AA5439"/>
+  <rect x="1078" y="512" width="86" height="22" rx="11" fill="#331911"/><text x="1088" y="527" fill="#F7EEEB" font-size="10">Ver pedido (3)</text>
+
+  <!-- ===== LEYENDA ===== -->
+  <text x="20" y="604" font-size="15" font-weight="700" fill="#331911">Anotaciones: por qué se organizó así</text>
+  <g fill="#331911" font-size="13">
+    <text x="20"  y="630"><tspan font-weight="700" fill="#B3261E">①</tspan> Jerarquía: lo que el cliente va armando (pedido) queda siempre visible junto al catálogo en escritorio; así no pierde el contexto al agregar.</text>
+    <text x="20"  y="652"><tspan font-weight="700" fill="#B3261E">②</tspan> Navegación del flujo: elegir (tarjeta) → ajustar cantidad (panel) → confirmar (botón principal). Una sola acción primaria por región.</text>
+    <text x="20"  y="674"><tspan font-weight="700" fill="#B3261E">③</tspan> Macroestructura con grid de 12 columnas: catálogo 9/12 + pedido 3/12 en xl (≈75 % / 25 %); en lg 8/12 + 4/12; bajo lg se apilan.</text>
+    <text x="20"  y="696"><tspan font-weight="700" fill="#B3261E">④</tspan> Filtros por categoría + buscador: en móvil los filtros se desplazan en una sola línea para no empujar el catálogo hacia abajo.</text>
+    <text x="20"  y="718"><tspan font-weight="700" fill="#B3261E">⑤</tspan> Tablet/móvil: el pedido pasa debajo del catálogo; un botón flotante «Ver pedido (n)» evita hacer scroll largo para confirmar.</text>
+    <text x="20"  y="750"><tspan font-weight="700">Columnas de tarjetas:</tspan> móvil 1 · tablet 2 · lg 2 · xl 3.   <tspan font-weight="700">Dentro de la tarjeta (flex):</tspan> imagen arriba, texto al centro (crece), pie con precio + botón en fila.</text>
+    <text x="20"  y="772"><tspan font-weight="700">Estados previstos:</tspan> cargando (spinner) · éxito (catálogo/pedido confirmado) · error (mensaje + Reintentar, el pedido se conserva) · vacío (sin productos o sin resultados).</text>
+  </g>
+  <text x="20" y="805" font-size="11" fill="#6b5a52">Boceto digital de apoyo. Reemplazar o complementar con el boceto/figura propia hecha antes de programar, si la hay.</text>
+</svg>

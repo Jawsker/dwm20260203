@@ -13,6 +13,15 @@
     --lr-green:   #4D2619;   /* base + 55% negro — usado en etiquetas/eyebrows */
     --lr-ink:     #331911;   /* base + 70% negro — texto, navbar, footer */
 
+    /* Escala de espaciado y radios (box model consistente, en rem para que escale con la fuente) */
+    --lr-space-1: .5rem;
+    --lr-space-2: .75rem;
+    --lr-space-3: 1rem;
+    --lr-space-4: 1.5rem;
+    --lr-space-5: 3rem;
+    --lr-radius: .6rem;
+    --lr-line: rgba(51,25,17,.14);
+
     /* Sobrescritura de variables de Bootstrap */
     --bs-body-font-family: 'Work Sans', system-ui, sans-serif;
     --bs-body-color: var(--lr-ink);
@@ -22,6 +31,9 @@
     --bs-link-color: var(--lr-brick);
     --bs-link-hover-color: var(--lr-brick-dark);
 }
+
+/* Box model: el ancho declarado incluye padding y borde en todos los componentes propios */
+*, *::before, *::after{ box-sizing: border-box; }
 
 ::selection{ background: var(--lr-gold); color: var(--lr-ink); }
 
@@ -169,8 +181,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    width: 108px;
-    height: 108px;
+    width: 6.75rem;
+    aspect-ratio: 1;
     border-radius: 50%;
     border: 2px dashed var(--lr-green);
     color: var(--lr-green);
@@ -184,13 +196,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .lr-stamp strong{ font-family:'Fraunces', serif; font-size:1.05rem; display:block; }
 
-/* ---------- Tarjetas de producto ---------- */
+/* ---------- Tarjetas de producto ----------
+   Box model: padding en rem, borde de 1px, imagen con aspect-ratio (sin alturas fijas).
+   Flex: la tarjeta es una columna; el pie (precio + botón) reparte el espacio en fila. */
 .lr-card{
-    background: var(--lr-cream);
-    border: 1px solid rgba(43,33,22,.1);
-    border-radius: .6rem;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    min-width: 0;
+    background: var(--lr-cream);
+    border: 1px solid var(--lr-line);
+    border-radius: var(--lr-radius);
+    overflow: hidden;
     transition: transform .18s ease, box-shadow .18s ease;
 }
 .lr-card:hover{
@@ -198,15 +215,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     box-shadow: 0 14px 30px rgba(43,33,22,.14);
 }
 .lr-card-media{
-    height: 150px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 16 / 9;
+    font-size: clamp(2.4rem, 6vw, 3.2rem);
     background: linear-gradient(135deg, var(--lr-kraft), var(--lr-cream));
-    border-bottom: 1px solid rgba(43,33,22,.08);
+    border-bottom: 1px solid var(--lr-line);
 }
-.lr-card-body{ padding: 1.15rem 1.25rem 1.4rem; }
+.lr-card-body{
+    flex: 1 1 auto;                      /* empuja el pie hacia abajo en tarjetas de distinto largo */
+    padding: var(--lr-space-3) var(--lr-space-3) var(--lr-space-2);
+}
+.lr-card-body p{ margin-bottom: 0; font-size: .92rem; }
 .lr-card-cat{
     font-size: .72rem;
     font-weight: 700;
@@ -214,10 +235,34 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     text-transform: uppercase;
     letter-spacing: .06em;
 }
-.lr-card h5{ margin: .3rem 0 .4rem; font-family:'Fraunces', serif; }
-.lr-price{ color: var(--lr-brick); font-weight: 700; }
+.lr-card h5{ margin: .3rem 0 .4rem; font-family:'Fraunces', serif; overflow-wrap: anywhere; }
+.lr-card-footer{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-2) var(--lr-space-3) var(--lr-space-3);
+}
+.lr-price{ color: var(--lr-brick); font-weight: 700; font-size: 1.05rem; }
 
-/* ---------- Filtro de productos ---------- */
+/* ---------- Página de productos: cabecera y barra de herramientas ---------- */
+.lr-page-head{ margin-bottom: var(--lr-space-4); }
+.lr-page-head h1{ margin-bottom: var(--lr-space-2); }
+.lr-page-head p{ margin-bottom: 0; }
+
+.lr-toolbar{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-space-2) var(--lr-space-3);
+}
+.lr-filtros{
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-1);
+}
 .lr-filtros .btn{
     border-radius: 999px;
     border: 1.5px solid var(--lr-ink);
@@ -232,10 +277,125 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     background: var(--lr-ink);
     color: var(--lr-cream);
 }
-.lr-hidden{ display:none !important; }
+.lr-buscador{ flex: 1 1 13rem; min-width: 0; max-width: 20rem; }
+.lr-buscador .form-control{ border-radius: 999px; border: 1.5px solid var(--lr-ink); padding: .45rem 1.1rem; }
+.lr-contador{ margin: var(--lr-space-2) 0 var(--lr-space-3); font-size: .85rem; color: #6b5a52; min-height: 1.3em; }
+
+/* ---------- Estados del servicio: carga / error / vacío ---------- */
+.lr-estado{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-3);
+    padding: var(--lr-space-4);
+    border: 1.5px dashed var(--lr-gold);
+    border-radius: var(--lr-radius);
+    background: rgba(230,204,196,.35);
+}
+.lr-estado--error{ border-color: #b3261e; background: rgba(179,38,30,.07); }
+.lr-estado-icono{ font-size: 2rem; line-height: 1; color: var(--lr-brick); flex-shrink: 0; }
+.lr-estado-texto{ display: flex; flex-direction: column; gap: .15rem; flex: 1 1 14rem; min-width: 0; }
+
+/* ---------- Panel de pedido ---------- */
+.lr-pedido{
+    padding: var(--lr-space-3);
+    border: 1px solid var(--lr-line);
+    border-radius: var(--lr-radius);
+    background: #fff;
+}
+.lr-pedido-head{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-space-2);
+    margin-bottom: var(--lr-space-2);
+}
+.lr-pedido-head h2{ font-size: 1.35rem; margin: 0; }
+.lr-badge{
+    padding: .15rem .65rem;
+    border-radius: 999px;
+    background: var(--lr-kraft);
+    color: var(--lr-ink);
+    font-size: .8rem;
+    font-weight: 700;
+}
+.lr-pedido-vacio{ margin: 0 0 var(--lr-space-3); color: #6b5a52; font-size: .92rem; }
+.lr-pedido-lista{ list-style: none; margin: 0 0 var(--lr-space-2); padding: 0; }
+.lr-pedido-item{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-1) var(--lr-space-2);
+    padding: var(--lr-space-2) 0;
+    border-bottom: 1px solid var(--lr-line);
+    max-width: none;
+}
+.lr-pedido-info{ display: flex; flex-direction: column; flex: 1 1 8rem; min-width: 0; }
+.lr-pedido-nombre{ font-weight: 600; overflow-wrap: anywhere; }
+.lr-pedido-precio{ font-size: .8rem; color: #6b5a52; }
+.lr-pedido-subtotal{ font-weight: 700; margin-left: auto; }
+.lr-cantidad{ display: inline-flex; align-items: center; gap: .25rem; }
+.lr-cantidad-valor{ min-width: 1.6rem; text-align: center; font-weight: 600; }
+.lr-cantidad-btn,
+.lr-quitar{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;              /* objetivo táctil cómodo sin fijar el ancho del contenedor */
+    padding: 0;
+    border: 1.5px solid var(--lr-ink);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--lr-ink);
+    font-weight: 700;
+    line-height: 1;
+}
+.lr-cantidad-btn:hover{ background: var(--lr-ink); color: var(--lr-cream); }
+.lr-quitar{ border-color: transparent; color: #8a3a2a; }
+.lr-quitar:hover{ background: rgba(170,84,57,.12); }
+.lr-pedido-total{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: var(--lr-space-2) 0 var(--lr-space-3);
+    font-size: 1.15rem;
+}
+.lr-alerta{ display: flex; flex-direction: column; gap: .15rem; margin-bottom: var(--lr-space-3); font-size: .92rem; }
+#btnConfirmar.is-loading{ opacity: .75; cursor: progress; }
+.lr-btn-primary:disabled{ background: var(--lr-gold); color: var(--lr-ink); opacity: .7; }
+.lr-pulso{ animation: lr-pulso .35s ease; }
+@keyframes lr-pulso{ 40%{ transform: scale(1.08); } }
+
+/* Botón flotante hacia el pedido (solo cuando el pedido queda debajo del catálogo) */
+.lr-fab{
+    position: fixed;
+    left: var(--lr-space-3);
+    bottom: var(--lr-space-3);
+    z-index: 1030;
+    padding: .65rem 1.1rem;
+    border-radius: 999px;
+    background: var(--lr-ink);
+    color: var(--lr-cream);
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 8px 20px rgba(43,33,22,.3);
+}
+.lr-fab:hover{ color: var(--lr-cream); background: var(--lr-brick-dark); }
+
+/* Panel de pruebas del servicio simulado */
+.lr-pruebas{
+    margin-top: var(--lr-space-5);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border: 1px dashed var(--lr-line);
+    border-radius: var(--lr-radius);
+    max-width: 32rem;
+}
+.lr-pruebas summary{ cursor: pointer; font-weight: 600; font-size: .9rem; }
+.lr-pruebas-cuerpo{ padding-top: var(--lr-space-2); }
 
 /* ---------- Secciones genéricas ---------- */
-.lr-section{ padding: 4.5rem 0; }
+.lr-section{ padding: clamp(2.5rem, 6vw, 4.5rem) 0; }
 .lr-section-kraft{ background: var(--lr-kraft); }
 .lr-section-ink{ background: var(--lr-ink); color: var(--lr-cream); }
 .lr-section-ink h2{ color: var(--lr-cream); }
@@ -259,7 +419,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* ---------- Equipo / valores ---------- */
 .lr-valor-icono{
-    width: 54px; height:54px;
+    width: 3.4rem; aspect-ratio: 1;
     border-radius: 50%;
     background: var(--lr-kraft);
     color: var(--lr-green);
@@ -268,7 +428,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     margin-bottom: 1rem;
 }
 .lr-avatar{
-    width: 76px; height:76px; border-radius:50%;
+    width: 4.75rem; aspect-ratio: 1; border-radius:50%;
     background: var(--lr-gold);
     color: var(--lr-ink);
     display:flex; align-items:center; justify-content:center;
@@ -316,7 +476,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     top: 1.25rem;
     right: 1.25rem;
     z-index: 1080;
-    min-width: 260px;
+    min-width: min(16rem, calc(100vw - 2.5rem));
+    max-width: calc(100vw - 2.5rem);
     background: var(--lr-green);
     color: var(--lr-cream);
     padding: .9rem 1.1rem;
@@ -332,8 +493,38 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     *{ transition: none !important; animation: none !important; }
 }
 
+/* ---------- Comportamiento por breakpoint ---------- */
+
+/* lg y más (≥992px): el pedido queda a la derecha y acompaña el scroll del catálogo */
+@media (min-width: 992px){
+    #pedido .lr-pedido{ position: sticky; top: 5.5rem; }
+}
+
+/* Tablet y móvil (<992px): pedido debajo del catálogo; el espacio de abajo evita que el botón flotante tape contenido */
+@media (max-width: 991.98px){
+    .lr-section-catalogo{ padding-bottom: 5.5rem; }
+}
+
+/* Bajo lg: g-5 trae un gutter horizontal de 3rem, cuyo margen negativo (−1.5rem) supera el relleno del
+   contenedor (.75rem) y genera scroll horizontal. Se iguala el gutter horizontal y se conserva el vertical. */
+@media (max-width: 991.98px){
+    .row.g-5{ --bs-gutter-x: 1.5rem; }
+}
+
+/* Móvil (<768px) */
 @media (max-width: 767.98px){
     .lr-hero{ padding: 3.2rem 0; text-align:center; }
     .lr-wheat{ display:none; }
     .lr-hero .d-flex.gap-3{ justify-content:center; }
+    .lr-buscador{ flex-basis: 100%; max-width: none; }
+}
+
+/* Móvil pequeño (<576px): los filtros se desplazan en una sola línea en vez de ocupar varias filas */
+@media (max-width: 575.98px){
+    /* el margen negativo iguala exactamente el gutter de la columna (--bs-gutter-x), así el scroll llega al borde sin desbordar la página */
+    .lr-filtros{ flex-wrap: nowrap; overflow-x: auto; padding-bottom: .35rem; margin-inline: calc(var(--bs-gutter-x) * -.5); padding-inline: calc(var(--bs-gutter-x) * .5); }
+    .lr-filtros .btn{ flex: 0 0 auto; white-space: nowrap; }
+    /* column + nowrap: con wrap, el ancho lo dictaría el contenido de los filtros en una sola línea y desbordaría la pantalla */
+    .lr-toolbar{ flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+    .lr-filtros{ min-width: 0; }
 }
