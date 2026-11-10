@@ -1,0 +1,162 @@
+# Libre & Rico — Evaluación 2. Arranque: ver README.md (sección «Cómo ejecutar»).
+#
+# Redes:
+#   public  → sale a tu máquina. Solo gateway (8000) y frontend (8080) publican puertos.
+#   private → internal:true, sin ruta hacia afuera. Aquí viven mongo, vault y los 6 servicios privados.
+name: libre-y-rico
+
+x-backend: &backend
+  restart: unless-stopped
+  depends_on:
+    bootstrap: {condition: service_completed_successfully}
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  tmpfs: [/tmp]
+
+networks:
+  public: {}
+  private: {internal: true}
+
+volumes:
+  mongo-data: {}
+  tok-auth: {}
+  tok-clients: {}
+  tok-inventory: {}
+  tok-orders: {}
+  tok-payments: {}
+  tok-graphql: {}
+  tok-gateway: {}
+
+services:
+  vault:
+    image: hashicorp/vault:1.17
+    command: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:?ejecuta python scripts/init_env.py}
+    cap_add: [IPC_LOCK]
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [private]          # sin puertos publicados
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?}
+    volumes: [mongo-data:/data/db]   # persistencia real: sobrevive a `docker compose down`
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [private]          # sin puertos publicados
+
+  bootstrap:
+    build: {context: ../scripts, dockerfile: Dockerfile.bootstrap}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_ROOT_TOKEN: ${VAULT_ROOT_TOKEN:?}
+      MONGO_ROOT_USER: ${MONGO_ROOT_USER:?}
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?}
+    volumes:
+      - tok-auth:/run/tokens/auth
+      - tok-clients:/run/tokens/clients
+      - tok-inventory:/run/tokens/inventory
+      - tok-orders:/run/tokens/orders
+      - tok-payments:/run/tokens/payments
+      - tok-graphql:/run/tokens/graphql
+      - tok-gateway:/run/tokens/gateway
+    depends_on:
+      vault: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+    networks: [private]
+    restart: "no"
+
+  auth:
+    <<: *backend
+    build: {context: ../backend, args: {SVC_DIR: auth}}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN_FILE: /run/token/token
+      LR_SECRETS_MODE: vault
+      LR_SEED: "1"
+      LR_SEED_PASSWORD: ${LR_SEED_PASSWORD:?define LR_SEED_PASSWORD en deploy/.env}
+    volumes: [tok-auth:/run/token:ro]
+    networks: [private]
+  clients:
+    <<: *backend
+    build: {context: ../backend, args: {SVC_DIR: clients}}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN_FILE: /run/token/token
+      LR_SECRETS_MODE: vault
+      LR_SEED: "1"
+    volumes: [tok-clients:/run/token:ro]
+    networks: [private]
+  inventory:
+    <<: *backend
+    build: {context: ../backend, args: {SVC_DIR: inventory}}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN_FILE: /run/token/token
+      LR_SECRETS_MODE: vault
+      LR_SEED: "1"
+    volumes: [tok-inventory:/run/token:ro]
+    networks: [private]
+  orders:
+    <<: *backend
+    build: {context: ../backend, args: {SVC_DIR: orders}}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN_FILE: /run/token/token
+      LR_SECRETS_MODE: vault
+      LR_INVENTORY_URL: http://inventory:8000
+      LR_PAYMENTS_URL: http://payments:8000
+    volumes: [tok-orders:/run/token:ro]
+    networks: [private]
+  payments:
+    <<: *backend
+    build: {context: ../backend, args: {SVC_DIR: payments}}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN_FILE: /run/token/token
+      LR_SECRETS_MODE: vault
+      LR_ORDERS_URL: http://orders:8000
+      LR_WEBHOOK_URL: http://gateway:8000/api/v1/webhooks/payments
+    volumes: [tok-payments:/run/token:ro]
+    networks: [private]
+  graphql:
+    <<: *backend
+    build: {context: ../backend, args: {SVC_DIR: graphql_gateway}}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN_FILE: /run/token/token
+      LR_SECRETS_MODE: vault
+      LR_ORDERS_URL: http://orders:8000
+      LR_INVENTORY_URL: http://inventory:8000
+      LR_CLIENTS_URL: http://clients:8000
+    volumes: [tok-graphql:/run/token:ro]
+    networks: [private]
+  gateway:
+    <<: *backend
+    build: {context: ../backend, args: {SVC_DIR: gateway}}
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN_FILE: /run/token/token
+      LR_SECRETS_MODE: vault
+      LR_ALLOWED_ORIGINS: ${LR_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      LR_COOKIE_SECURE: ${LR_COOKIE_SECURE:-0}
+    volumes: [tok-gateway:/run/token:ro]
+    ports: ["8000:8000"]
+    networks: [public, private]
+  frontend:
+    image: php:8.3-apache
+    environment:
+      LR_API_BASE: ${LR_API_BASE:-http://localhost:8000}
+    volumes: [../frontend:/var/www/html:ro]
+    ports: ["8080:80"]
+    networks: [public]

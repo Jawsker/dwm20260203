@@ -1,0 +1,22 @@
+{
+  "categorias": [
+    { "id": "panes",      "nombre": "Panes" },
+    { "id": "pasteleria", "nombre": "Pastelería" },
+    { "id": "galletas",   "nombre": "Galletas" },
+    { "id": "salados",    "nombre": "Snacks salados" }
+  ],
+  "productos": [
+    { "id": 1,  "categoria": "panes",      "emoji": "🍞", "nombre": "Pan de molde",              "descripcion": "Ideal para sándwiches, en formato de 500 g.",       "precio": 3190 },
+    { "id": 2,  "categoria": "panes",      "emoji": "🥖", "nombre": "Baguette rústica",          "descripcion": "Corteza crocante, miga suave. Unidad de 250 g.",    "precio": 3490 },
+    { "id": 3,  "categoria": "panes",      "emoji": "🫓", "nombre": "Hallulla sin gluten",       "descripcion": "Pack de 4 unidades, perfectas para el desayuno.",   "precio": 2990 },
+    { "id": 4,  "categoria": "pasteleria", "emoji": "🍫", "nombre": "Torta de chocolate",        "descripcion": "Bizcocho húmedo con ganache. Tamaño familiar.",     "precio": 18990 },
+    { "id": 5,  "categoria": "pasteleria", "emoji": "🍰", "nombre": "Cheesecake de frutos rojos","descripcion": "Base de galleta sin gluten, coulis casero.",        "precio": 16490 },
+    { "id": 6,  "categoria": "pasteleria", "emoji": "🧁", "nombre": "Brownie individual",        "descripcion": "Intenso en cacao, con nueces opcional.",            "precio": 1990 },
+    { "id": 7,  "categoria": "galletas",   "emoji": "🍪", "nombre": "Avena y miel",              "descripcion": "Bolsa de 6 unidades, avena certificada.",           "precio": 4290 },
+    { "id": 8,  "categoria": "galletas",   "emoji": "🍫", "nombre": "Chips de chocolate",        "descripcion": "Bolsa de 8 unidades, crocantes por fuera.",         "precio": 4590 },
+    { "id": 9,  "categoria": "salados",    "emoji": "🥟", "nombre": "Empanaditas de queso",      "descripcion": "Pack de 10 unidades para horno o freidora.",        "precio": 5990 },
+    { "id": 10, "categoria": "salados",    "emoji": "🧀", "nombre": "Palitos de queso",          "descripcion": "Crujientes, ideales para picoteo. Bolsa 150 g.",    "precio": 3790 },
+    { "id": 11, "categoria": "salados",    "emoji": "🥐", "nombre": "Mini croissants salados",   "descripcion": "Rellenos de jamón y queso, pack de 6.",             "precio": 5490 },
+    { "id": 12, "categoria": "panes",      "emoji": "🥯", "nombre": "Pan pita sin gluten",       "descripcion": "Pack de 4, listo para rellenar.",                   "precio": 3290 }
+  ]
+}

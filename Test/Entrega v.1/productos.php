@@ -1,173 +1,81 @@
-<?php $page = 'productos'; $titulo = 'Productos'; include 'includes/header.php'; ?>
+<?php
+$page = 'productos';
+$titulo = 'Productos';
+$scripts = ['assets/js/api-dummy.js', 'assets/js/productos.js'];
+include 'includes/header.php';
+?>
 
-<section class="lr-section" style="padding-bottom:2rem;">
+<section class="lr-section lr-section-catalogo">
     <div class="container">
-        <div class="lr-eyebrow-line">Catálogo</div>
-        <h1 class="mb-3">Nuestros productos</h1>
-        <p class="mb-4" style="max-width:60ch">
-            Todo lo que horneamos está libre de gluten y elaborado con ingredientes certificados.
-            Filtra por categoría para encontrar lo que buscas.
-        </p>
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div class="lr-filtros d-flex flex-wrap gap-2">
-                <button type="button" class="btn is-active" data-filtro="todos">Todos</button>
-                <button type="button" class="btn" data-filtro="panes">Panes</button>
-                <button type="button" class="btn" data-filtro="pasteleria">Pastelería</button>
-                <button type="button" class="btn" data-filtro="galletas">Galletas</button>
-                <button type="button" class="btn" data-filtro="salados">Snacks salados</button>
-            </div>
-            <span class="small text-muted" id="contadorProductos"></span>
-        </div>
+        <header class="lr-page-head">
+            <div class="lr-eyebrow-line">Catálogo y pedido</div>
+            <h1>Arma tu pedido sin gluten</h1>
+            <p>
+                Todo lo que horneamos está libre de gluten y elaborado con ingredientes certificados.
+                Elige tus productos, ajusta las cantidades y confirma para retirar en la tienda.
+            </p>
+        </header>
 
+        <!-- MACROESTRUCTURA (grid de Bootstrap): catálogo 8/12 + pedido 4/12 en lg; 9/12 + 3/12 en xl; apilados bajo lg -->
         <div class="row g-4">
 
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="panes">
-                    <div class="lr-card-media">🍞</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Panes</span>
-                        <h5>Pan de molde</h5>
-                        <p>Ideal para sándwiches, en formato de 500 g.</p>
-                        <span class="lr-price">$3.190</span>
+            <!-- Región 1: catálogo (el contenido lo genera js/productos.js a partir del servicio simulado) -->
+            <div class="col-12 col-lg-8 col-xl-9">
+                <div class="lr-toolbar">
+                    <div class="lr-filtros" id="filtros" role="group" aria-label="Filtrar por categoría"></div>
+                    <div class="lr-buscador">
+                        <label for="buscador" class="visually-hidden">Buscar producto</label>
+                        <input type="search" id="buscador" class="form-control" placeholder="Buscar producto…" autocomplete="off" disabled>
                     </div>
                 </div>
+                <p class="lr-contador" id="contadorProductos" aria-live="polite"></p>
+
+                <div id="catalogoEstado" aria-live="polite"></div>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-4 d-none" id="catalogoGrid"></div>
             </div>
 
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="panes">
-                    <div class="lr-card-media">🥖</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Panes</span>
-                        <h5>Baguette rústica</h5>
-                        <p>Corteza crocante, miga suave. Unidad de 250 g.</p>
-                        <span class="lr-price">$3.490</span>
+            <!-- Región 2: pedido en curso -->
+            <aside class="col-12 col-lg-4 col-xl-3" id="pedido" aria-labelledby="tituloPedido">
+                <div class="lr-pedido">
+                    <div class="lr-pedido-head">
+                        <h2 id="tituloPedido">Tu pedido</h2>
+                        <span class="lr-badge"><span data-pedido-cantidad>0</span> u.</span>
                     </div>
-                </div>
-            </div>
 
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="panes">
-                    <div class="lr-card-media">🫓</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Panes</span>
-                        <h5>Hallulla sin gluten</h5>
-                        <p>Pack de 4 unidades, perfectas para el desayuno.</p>
-                        <span class="lr-price">$2.990</span>
+                    <p class="lr-pedido-vacio" id="pedidoVacio">Aún no agregas productos. Elige algo del catálogo para empezar.</p>
+                    <ul class="lr-pedido-lista d-none" id="pedidoLista"></ul>
+
+                    <div class="lr-pedido-total">
+                        <span>Total</span>
+                        <strong id="pedidoTotal">$0</strong>
                     </div>
-                </div>
-            </div>
 
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="pasteleria">
-                    <div class="lr-card-media">🍫</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Pastelería</span>
-                        <h5>Torta de chocolate</h5>
-                        <p>Bizcocho húmedo con ganache. Tamaño familiar.</p>
-                        <span class="lr-price">$18.990</span>
-                    </div>
-                </div>
-            </div>
+                    <div id="pedidoEstado" aria-live="polite"></div>
 
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="pasteleria">
-                    <div class="lr-card-media">🍰</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Pastelería</span>
-                        <h5>Cheesecake de frutos rojos</h5>
-                        <p>Base de galleta sin gluten, coulis casero.</p>
-                        <span class="lr-price">$16.490</span>
-                    </div>
+                    <button type="button" class="btn lr-btn-primary w-100" id="btnConfirmar" disabled>Confirmar pedido</button>
                 </div>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="pasteleria">
-                    <div class="lr-card-media">🧁</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Pastelería</span>
-                        <h5>Brownie individual</h5>
-                        <p>Intenso en cacao, con nueces opcional.</p>
-                        <span class="lr-price">$1.990</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="galletas">
-                    <div class="lr-card-media">🍪</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Galletas</span>
-                        <h5>Avena y miel</h5>
-                        <p>Bolsa de 6 unidades, avena certificada.</p>
-                        <span class="lr-price">$4.290</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="galletas">
-                    <div class="lr-card-media">🍫</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Galletas</span>
-                        <h5>Chips de chocolate</h5>
-                        <p>Bolsa de 8 unidades, crocantes por fuera.</p>
-                        <span class="lr-price">$4.590</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="salados">
-                    <div class="lr-card-media">🥟</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Snacks salados</span>
-                        <h5>Empanaditas de queso</h5>
-                        <p>Pack de 10 unidades para horno o freidora.</p>
-                        <span class="lr-price">$5.990</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="salados">
-                    <div class="lr-card-media">🧀</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Snacks salados</span>
-                        <h5>Palitos de queso</h5>
-                        <p>Crujientes, ideales para picoteo. Bolsa 150 g.</p>
-                        <span class="lr-price">$3.790</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="salados">
-                    <div class="lr-card-media">🥐</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Snacks salados</span>
-                        <h5>Mini croissants salados</h5>
-                        <p>Rellenos de jamón y queso, pack de 6.</p>
-                        <span class="lr-price">$5.490</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="lr-card" data-categoria="panes">
-                    <div class="lr-card-media">🥯</div>
-                    <div class="lr-card-body">
-                        <span class="lr-card-cat">Panes</span>
-                        <h5>Pan pita sin gluten</h5>
-                        <p>Pack de 4, listo para rellenar.</p>
-                        <span class="lr-price">$3.290</span>
-                    </div>
-                </div>
-            </div>
-
+            </aside>
         </div>
+
+        <!-- Control para demostrar los estados de la interfaz sin backend real -->
+        <details class="lr-pruebas">
+            <summary>Panel de pruebas del servicio simulado</summary>
+            <div class="lr-pruebas-cuerpo">
+                <label for="modoServicio" class="form-label">Escenario del servicio</label>
+                <select id="modoServicio" class="form-select">
+                    <option value="normal">Normal (éxito)</option>
+                    <option value="catalogo_lento">Catálogo lento (carga prolongada)</option>
+                    <option value="catalogo_error">Catálogo con error</option>
+                    <option value="catalogo_vacio">Catálogo vacío</option>
+                    <option value="pedido_error">Confirmación de pedido con error</option>
+                </select>
+                <p class="form-text mb-0">Cambia el escenario y vuelve a usar el catálogo o a confirmar el pedido para ver cada estado.</p>
+            </div>
+        </details>
     </div>
 </section>
+
+<a href="#pedido" class="lr-fab d-lg-none">Ver pedido (<span data-pedido-cantidad>0</span>)</a>
 
 <?php include 'includes/footer.php'; ?>

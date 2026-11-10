@@ -65,3 +65,13 @@ Todos en `assets/js/custom.js`:
 1. Copiar la carpeta `Entrega v.1/` dentro del directorio de un servidor local con PHP (ej. `htdocs` de XAMPP).
 2. Iniciar Apache.
 3. Abrir `http://localhost/Entrega v.1/index.php` en el navegador.
+
+
+## Evaluaciones (Unidad 2)
+
+| Evaluación | Carpeta | Contenido |
+|---|---|---|
+| Evaluación 1 | [`Test/Entrega v.1`](Test/Entrega%20v.1) | Front-end PHP + Bootstrap + JS con catálogo y pedido dinámicos sobre un servicio simulado |
+| Evaluación 2 | [`Unidad 2/evaluacion2`](Unidad%202/evaluacion2) | Backend seguro completo (7 servicios FastAPI, MongoDB, Vault, GraphQL) integrado al front-end. Empezar por su `README.md` y por `docs/GUIA-PARA-ENTENDER.md`; el informe está en `docs/INFORME.md` |
+
+Todos los datos y usuarios son ficticios. Las contraseñas de prueba se generan localmente (`deploy/.env` no se versiona).

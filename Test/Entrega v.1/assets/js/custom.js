@@ -2,9 +2,9 @@
    LIBRE & RICO — eventos JS personalizados
    1. Navbar que reacciona al scroll
    2. Botón "volver arriba"
-   3. Filtro de productos por categoría
-   4. Validación de formulario de contacto
-   5. Validación del modal de login (simulada)
+   3. Validación de formulario de contacto
+   4. Validación del modal de login (simulada)
+   (El catálogo y el pedido viven en productos.js)
    ============================================================ */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -28,35 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ---------- 3. Filtro de productos (solo existe en productos.php) ---------- */
-    const filtros = document.querySelectorAll('[data-filtro]');
-    const tarjetas = document.querySelectorAll('[data-categoria]');
-    const contador = document.getElementById('contadorProductos');
-
-    function aplicarFiltro(categoria) {
-        let visibles = 0;
-        tarjetas.forEach(function (tarjeta) {
-            const coincide = categoria === 'todos' || tarjeta.dataset.categoria === categoria;
-            tarjeta.closest('.col-6, .col-md-4, .col-lg-3').classList.toggle('lr-hidden', !coincide);
-            if (coincide) visibles++;
-        });
-        if (contador) {
-            contador.textContent = visibles + (visibles === 1 ? ' producto' : ' productos');
-        }
-    }
-
-    if (filtros.length) {
-        filtros.forEach(function (boton) {
-            boton.addEventListener('click', function () {
-                filtros.forEach(function (b) { b.classList.remove('is-active'); });
-                boton.classList.add('is-active');
-                aplicarFiltro(boton.dataset.filtro);
-            });
-        });
-        aplicarFiltro('todos');
-    }
-
-    /* ---------- 4. Validación del formulario de contacto ---------- */
+    /* ---------- 3. Validación del formulario de contacto ---------- */
     const formContacto = document.getElementById('formContacto');
 
     if (formContacto) {
@@ -101,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ---------- 5. Login simulado en el modal ---------- */
+    /* ---------- 4. Login simulado en el modal ---------- */
     const formLogin = document.getElementById('formLogin');
     if (formLogin) {
         formLogin.addEventListener('submit', function (evento) {
