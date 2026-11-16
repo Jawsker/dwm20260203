@@ -22,6 +22,7 @@ from strawberry.extensions import (DisableIntrospection, MaskErrors, MaxAliasesL
                                    QueryDepthLimiter)
 from strawberry.fastapi import GraphQLRouter
 
+from lr_common.ports import default_url
 from lr_common.client import ServiceClient
 from lr_common.web import ApiError, Edge, create_app, edge_guard
 
@@ -30,9 +31,9 @@ app = create_app(SERVICE)
 guard = edge_guard(SERVICE, allowed=["gateway"], identity_from=["gateway"])
 
 TIMEOUT = float(os.getenv("LR_GQL_DOWNSTREAM_TIMEOUT", "2.5"))
-orders_api = ServiceClient(SERVICE, "orders", "LR_ORDERS_URL", "http://orders:8000", timeout=TIMEOUT)
-inventory_api = ServiceClient(SERVICE, "inventory", "LR_INVENTORY_URL", "http://inventory:8000", timeout=TIMEOUT)
-clients_api = ServiceClient(SERVICE, "clients", "LR_CLIENTS_URL", "http://clients:8000", timeout=TIMEOUT)
+orders_api = ServiceClient(SERVICE, "orders", "LR_ORDERS_URL", default_url("orders"), timeout=TIMEOUT)
+inventory_api = ServiceClient(SERVICE, "inventory", "LR_INVENTORY_URL", default_url("inventory"), timeout=TIMEOUT)
+clients_api = ServiceClient(SERVICE, "clients", "LR_CLIENTS_URL", default_url("clients"), timeout=TIMEOUT)
 
 
 def fail(exc: ApiError) -> GraphQLError:

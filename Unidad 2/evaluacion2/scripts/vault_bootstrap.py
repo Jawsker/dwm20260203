@@ -62,8 +62,11 @@ def wait_vault():
 
 def main():
     wait_vault()
-    mongo = MongoClient(f"mongodb://{quote_plus(os.environ['MONGO_ROOT_USER'])}:{quote_plus(os.environ['MONGO_ROOT_PASSWORD'])}"
-                        f"@{MONGO_HOST}:27017/?authSource=admin", serverSelectionTimeoutMS=30000)
+    if os.getenv("MONGO_ROOT_USER"):
+        mongo = MongoClient(f"mongodb://{quote_plus(os.environ['MONGO_ROOT_USER'])}:{quote_plus(os.environ['MONGO_ROOT_PASSWORD'])}"
+                            f"@{MONGO_HOST}:27017/?authSource=admin", serverSelectionTimeoutMS=30000)
+    else:  # MongoDB local sin autenticación de administrador (mongodb://localhost:27017, como en clases)
+        mongo = MongoClient(f"mongodb://{MONGO_HOST}:27017/", serverSelectionTimeoutMS=30000)
     mongo.admin.command("ping")
 
     for svc in WITH_DB:
@@ -83,6 +86,9 @@ def main():
             write_secret(ref, {"key": secrets.token_hex(32)})
     if not read_secret("payments/webhook"):
         write_secret("payments/webhook", {"secret": secrets.token_hex(32)})
+    # Credencial del broker STOMP: la define deploy/.env (el broker arranca con la misma) y solo Orders puede leerla.
+    if os.getenv("STOMP_USER") and os.getenv("STOMP_PASSWORD"):
+        write_secret("stomp/broker", {"user": os.environ["STOMP_USER"], "password": os.environ["STOMP_PASSWORD"]})
 
     for svc in SERVICES:
         rules = "\n".join(f'path "secret/data/lr/{p}" {{ capabilities = ["read"] }}' for p in vault_paths_for(svc))

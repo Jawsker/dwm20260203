@@ -13,6 +13,8 @@ else:
         f"MONGO_ROOT_PASSWORD={secrets.token_urlsafe(24)}\n"
         f"VAULT_ROOT_TOKEN={secrets.token_urlsafe(24)}\n"
         f"LR_SEED_PASSWORD=Demo-{secrets.token_urlsafe(9)}\n"
+        "STOMP_USER=lr_orders\n"
+        f"STOMP_PASSWORD={secrets.token_urlsafe(18)}\n"
         "LR_ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080\n"
         "LR_COOKIE_SECURE=0\n"
         "LR_API_BASE=http://localhost:8000\n")

@@ -24,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
+from lr_common.ports import default_url
 from lr_common.client import ServiceClient
 from lr_common.logs import correlation_id
 from lr_common.web import ApiError, Identity, create_app
@@ -33,7 +34,7 @@ SERVICE = "gateway"
 app = create_app(SERVICE)
 
 SERVICES = {
-    name: ServiceClient(SERVICE, name, f"LR_{name.upper()}_URL", f"http://{name}:8000", timeout=4.0)
+    name: ServiceClient(SERVICE, name, f"LR_{name.upper()}_URL", default_url(name), timeout=4.0)
     for name in ("auth", "clients", "inventory", "orders", "payments", "graphql")
 }
 COOKIE = "lr_session"
@@ -82,13 +83,30 @@ def match(method: str, path: str) -> tuple[Optional[Route], dict, list[str]]:
 
 # --------------------------------------------------------------- sesión
 async def current_identity(request: Request) -> tuple[Optional[Identity], Optional[str], Optional[str]]:
-    token = request.cookies.get(COOKIE)
+    token = bearer_token(request) or request.cookies.get(COOKIE)
     if not token or len(token) > 200:
         return None, None, None
-    data = await SERVICES["auth"].acall("POST", "/internal/introspect", json={"token": token})
+    try:
+        data = await SERVICES["auth"].acall("POST", "/internal/introspect", json={"token": token})
+    except ApiError as exc:
+        if exc.status != 400:  # token con forma inválida = no autenticado; otros fallos se propagan
+            raise
+        data = {}
     if not data.get("active"):
         return None, token, None
     return Identity(data["user_id"], data["role"]), token, data.get("email")
+
+
+def bearer_token(request: Request) -> Optional[str]:
+    """Token en ``Authorization: Bearer`` (clientes que no son navegador: pruebas con curl, Postman, etc.).
+
+    El sitio web NO lo usa: el navegador solo recibe la cookie HttpOnly. Si viene esta cabecera, la identidad
+    sale de ella y la cookie se ignora.
+    """
+    auth = request.headers.get("authorization", "")
+    if auth[:7].lower() == "bearer " and auth[7:].strip():
+        return auth[7:].strip()
+    return None
 
 
 def set_cookie(resp: Response, token: str, max_age: int) -> None:
@@ -108,6 +126,8 @@ def check_origin(request: Request, route: Route, has_cookie: bool) -> None:
         m = re.match(r"^(https?://[^/]+)", ref)
         origin = m.group(1) if m else None
     if origin is None:
+        if bearer_token(request):  # sin cookie no hay CSRF: un sitio ajeno no puede añadir esta cabecera
+            return
         if route.auth == "session" or has_cookie:  # petición con cookie sin origen verificable
             raise ApiError(403, "csrf_origin", "Origen de la solicitud no verificable.")
         return
@@ -166,6 +186,13 @@ async def h_login(request, route, body, ident, token, email):
     return await _login(data.email, data.password)
 
 
+async def h_token(request, route, body, ident, token, email):
+    """Igual que login, pero entrega el token en el cuerpo y NO crea cookie (clientes que no son navegador)."""
+    data = parse(LoginIn, body)
+    res = await SERVICES["auth"].acall("POST", "/internal/login", json={"email": data.email, "password": data.password})
+    return JSONResponse({"access_token": res["token"], "token_type": "bearer", "expires_in": res["max_age"], "user": res["user"]})
+
+
 async def h_logout(request, route, body, ident, token, email):
     await SERVICES["auth"].acall("POST", "/internal/logout", json={"token": token})
     resp = Response(status_code=204)
@@ -186,7 +213,7 @@ async def h_delete_account(request, route, body, ident, token, email):
     return resp
 
 
-HANDLERS = {"register": h_register, "login": h_login, "logout": h_logout, "session": h_session,
+HANDLERS = {"register": h_register, "login": h_login, "token": h_token, "logout": h_logout, "session": h_session,
             "delete_account": h_delete_account}
 ALLOWED_FORWARD = {"content-type", "idempotency-key", "x-provider-signature"}
 
@@ -229,7 +256,7 @@ async def dispatch(request: Request, full_path: str):
             raise ApiError(415, "unsupported_media_type", "Se requiere application/json.")
 
     ident = token = email = None
-    has_cookie = COOKIE in request.cookies
+    has_cookie = COOKIE in request.cookies and not bearer_token(request)
     check_origin(request, route, has_cookie)
     if route.auth == "session":
         ident, token, email = await current_identity(request)

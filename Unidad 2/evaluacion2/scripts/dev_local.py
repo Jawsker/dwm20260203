@@ -7,6 +7,15 @@ Levanta los 7 servicios como procesos independientes. Diferencias con docker com
     su política de Vault le entregaría (si un servicio pide un secreto que no le corresponde, falla,
     igual que fallaría contra Vault).
 Uso:  python scripts/dev_local.py        (Ctrl+C para detener)
+
+Modo --real (misma forma de trabajo que en clases: cada pieza en su puerto, con Vault y MongoDB locales):
+  vault server -dev -dev-root-token-id=<token>      → http://127.0.0.1:8200
+  mongod                                             → mongodb://localhost:27017
+  export VAULT_TOKEN=<token>
+  python scripts/dev_local.py --real
+Ejecuta scripts/vault_bootstrap.py (crea usuarios de Mongo, claves y un token de solo lectura por servicio en
+.local-tokens/) y arranca los procesos leyendo sus secretos desde Vault y guardando datos en MongoDB.
+Si además defines STOMP_USER y STOMP_PASSWORD (broker en 127.0.0.1:61613), Orders publica en /queue/pedidos.
 """
 from __future__ import annotations
 
@@ -22,9 +31,9 @@ from pathlib import Path
 import httpx
 
 ROOT = Path(__file__).resolve().parent.parent
-BACKEND = ROOT / "backend"
-PORTS = {"gateway": 8000, "auth": 8001, "clients": 8002, "inventory": 8003, "orders": 8004, "payments": 8005, "graphql": 8006}
-DIRS = {"graphql": "graphql_gateway"}
+COMMON = ROOT / "apigateway" / "common"
+sys.path.insert(0, str(COMMON))
+from lr_common.ports import LAYOUT, PORTS  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from topology import EDGES  # noqa: E402
 
@@ -35,12 +44,15 @@ def env_name(path: str, field: str) -> str:
 
 
 class Stack:
-    def __init__(self, overrides: dict | None = None, log_dir: Path | None = None):
+    def __init__(self, overrides: dict | None = None, log_dir: Path | None = None, real: bool = False):
         self.overrides = overrides or {}
+        self.real = real
+        self.token_dir = ROOT / ".local-tokens"
         self.procs: dict[str, subprocess.Popen] = {}
         self.service_env: dict[str, dict] = {}
         self.seed_password = "Demo-" + secrets.token_urlsafe(9)
         self.webhook_secret = secrets.token_hex(24)
+        self.stomp_user, self.stomp_password = "lr_orders", secrets.token_urlsafe(12)
         self.edge_keys = {f"{a}__{b}": secrets.token_hex(24) for a, b in EDGES}
         self.log_dir = log_dir or ROOT / ".local-logs"
         self.base = f"http://127.0.0.1:{PORTS['gateway']}"
@@ -48,7 +60,7 @@ class Stack:
     def _env_for(self, name: str) -> dict:
         env = dict(os.environ)
         env.update({
-            "PYTHONPATH": str(BACKEND / "common"), "LR_SECRETS_MODE": "env", "LR_DB_MODE": "mock", "LR_SEED": "1",
+            "PYTHONPATH": str(COMMON), "LR_SECRETS_MODE": "env", "LR_DB_MODE": "mock", "LR_SEED": "1",
             "LR_SEED_PASSWORD": self.seed_password,
             "LR_ALLOWED_ORIGINS": "http://localhost:8080,http://127.0.0.1:8080",
             "LR_WEBHOOK_URL": f"http://127.0.0.1:{PORTS['gateway']}/api/v1/webhooks/payments",
@@ -56,10 +68,22 @@ class Stack:
         })
         for svc, port in PORTS.items():
             env[f"LR_{svc.upper()}_URL"] = f"http://127.0.0.1:{port}"
+        if self.real:  # secretos desde Vault (token propio del servicio) y datos en MongoDB
+            env.pop("LR_DB_MODE")
+            env.update({"LR_SECRETS_MODE": "vault", "VAULT_ADDR": os.getenv("VAULT_ADDR", "http://127.0.0.1:8200"),
+                        "VAULT_TOKEN_FILE": str(self.token_dir / name / "token")})
+            env.pop("VAULT_TOKEN", None)  # el token raíz no llega a ningún servicio
+            if name == "orders" and os.getenv("STOMP_USER"):
+                env["LR_STOMP_HOST"] = os.getenv("LR_STOMP_HOST", "127.0.0.1")
+            env.update(self.overrides)
+            env.update(self.service_env.get(name, {}))
+            return env
         for pair, key in self.edge_keys.items():
             a, b = pair.split("__")
             if name in (a, b):  # solo las aristas en las que participa este servicio
                 env[env_name(f"edge/{pair}", "key")] = key
+        if name == "orders":  # credencial del broker STOMP (solo se usa si se define LR_STOMP_HOST)
+            env[env_name("stomp/broker", "user")], env[env_name("stomp/broker", "password")] = self.stomp_user, self.stomp_password
         if name == "payments":
             env[env_name("payments/webhook", "secret")] = self.webhook_secret
         env.update(self.overrides)
@@ -69,7 +93,7 @@ class Stack:
     def _spawn(self, name: str) -> None:
         log = open(self.log_dir / f"{name}.log", "a")
         self.procs[name] = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "main:app", "--app-dir", str(BACKEND / DIRS.get(name, name)),
+            [sys.executable, "-m", "uvicorn", f"{LAYOUT[name][1]}:app", "--app-dir", str(ROOT / LAYOUT[name][0]),
              "--host", "127.0.0.1", "--port", str(PORTS[name]), "--log-level", "warning"],
             env=self._env_for(name), stdout=log, stderr=subprocess.STDOUT)
 
@@ -90,7 +114,16 @@ class Stack:
                 time.sleep(0.3)
         raise RuntimeError(f"{name} no volvió a responder")
 
+    def bootstrap_real(self) -> None:
+        if not os.getenv("VAULT_TOKEN"):
+            raise SystemExit("Define VAULT_TOKEN con el token raíz del Vault local (vault server -dev).")
+        env = dict(os.environ, VAULT_ADDR=os.getenv("VAULT_ADDR", "http://127.0.0.1:8200"), VAULT_ROOT_TOKEN=os.environ["VAULT_TOKEN"],
+                   MONGO_HOST=os.getenv("MONGO_HOST", "127.0.0.1"), TOKEN_DIR=str(self.token_dir))
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "vault_bootstrap.py")], env=env, check=True)
+
     def start(self, timeout: float = 40.0) -> "Stack":
+        if self.real:
+            self.bootstrap_real()
         self.log_dir.mkdir(exist_ok=True)
         for old in self.log_dir.glob("*.log"):
             old.unlink()
@@ -125,12 +158,19 @@ class Stack:
 
 
 if __name__ == "__main__":
-    stack = Stack().start()
+    real = "--real" in sys.argv
+    if real and not os.getenv("LR_SEED_PASSWORD"):
+        raise SystemExit("Define LR_SEED_PASSWORD (contraseña de los usuarios de prueba) antes de usar --real.")
+    stack = Stack(real=real)
+    if real:
+        stack.seed_password = os.environ["LR_SEED_PASSWORD"]
+    stack.start()
     info = {"gateway": stack.base, "usuarios": ["ana@ejemplo.cl", "beto@ejemplo.cl", "tienda@libreyrico.test",
                                                 "admin@libreyrico.test", "auditoria@libreyrico.test"],
             "password_de_prueba": stack.seed_password}
     print(json.dumps(info, indent=2, ensure_ascii=False))
-    print("\nBase en memoria (se pierde al detener). Ctrl+C para detener.")
+    print("\nPuertos:", json.dumps(PORTS))
+    print("\nVault + MongoDB locales (los datos persisten)." if real else "\nBase en memoria (se pierde al detener).", "Ctrl+C para detener.")
     try:
         signal.pause()
     except KeyboardInterrupt:

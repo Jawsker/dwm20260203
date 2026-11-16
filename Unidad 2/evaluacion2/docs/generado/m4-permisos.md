@@ -26,3 +26,4 @@
 | S24 | `PUT /api/v1/admin/products/{product_id}/stock` | 401 | 403 | ✔ | ✔ | 403 | Personal/administración |
 | S25 | `POST /api/v1/admin/users` | 401 | 403 | 403 | ✔ | 403 | Solo administración |
 | S26 | `POST /api/v1/admin/maintenance/sweep` | 401 | 403 | 403 | ✔ | 403 | Solo administración |
+| S27 | `POST /api/v1/auth/token` | ✔ | ✔ | ✔ | ✔ | ✔ | — |

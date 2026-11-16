@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend" / "common"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "apigateway" / "common"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from lr_common.secrets import SecretUnavailable, SecretsProvider  # noqa: E402
 from topology import vault_paths_for  # noqa: E402

@@ -17,7 +17,7 @@ Ver `README.md` (raíz de `evaluacion2`): arranque con `docker compose`, arranqu
 Esto **no se ejecutó** en el entorno de desarrollo; es lo que debe verificarse antes de presentar:
 
 1. `python scripts/init_env.py` crea `deploy/.env`; `docker compose -f deploy/docker-compose.yml up --build` termina con `bootstrap` en estado *Exited (0)* y el resto *healthy*.
-2. `curl http://localhost:8000/health` → 200; `curl http://localhost:8001/health` desde el anfitrión → **debe fallar** (sin puerto publicado).
+2. `curl http://localhost:8000/health` → 200; `curl http://localhost:8100/health` desde el anfitrión → **debe fallar** (sin puerto publicado).
 3. Abrir `http://localhost:8080`, crear cuenta, comprar, pagar con el sandbox y ver «Pagado».
 4. **Persistencia real:** `docker compose down` (sin `-v`) y `up` de nuevo: el pedido y el usuario siguen.
 5. **Falla de Vault:** `docker compose stop vault` → el sistema sigue un tiempo con el último valor y luego responde 503; `start vault` → se recupera (en modo dev Vault pierde los secretos al reiniciarse: volver a ejecutar `bootstrap`).
@@ -27,10 +27,24 @@ Esto **no se ejecutó** en el entorno de desarrollo; es lo que debe verificarse 
 
 * **Arranque/parada:** `docker compose -f deploy/docker-compose.yml up -d --build` / `down`.
 * **Configuración de secretos:** nada se escribe a mano: `init_env.py` genera la clave raíz de Vault, la de MongoDB y la contraseña de los usuarios de prueba en `deploy/.env` (no versionado); `vault_bootstrap.py` genera y reparte el resto.
-* **Datos iniciales:** catálogo de 12 productos (`backend/inventory/catalogo.json`) y 5 usuarios ficticios (2 clientes, personal, admin, auditoría) con la contraseña de `LR_SEED_PASSWORD`.
+* **Datos iniciales:** catálogo de 12 productos (`apigateway/inventory/catalogo.json`) y 5 usuarios ficticios (2 clientes, personal, admin, auditoría) con la contraseña de `LR_SEED_PASSWORD`.
 * **Salud:** cada servicio expone `/health` (vivo) y `/ready` (base y dependencias).
 * **Rotación de un secreto:** borrar su ruta en Vault y volver a ejecutar `bootstrap`; reiniciar los servicios implicados.
 * **Registros:** JSON por salida estándar con `correlation_id` para seguir una solicitud entre servicios.
+
+## Ejecución local por procesos (misma forma de trabajo que en clases)
+
+| Pieza | Comando equivalente | Puerto |
+|---|---|---:|
+| Vault | `vault server -dev -dev-root-token-id=<token>` | 8200 |
+| MongoDB | `mongod` | 27017 |
+| Broker STOMP (opcional) | RabbitMQ con `rabbitmq_stomp` | 61613 |
+| Gateway | `uvicorn gateway:app --app-dir apigateway/gateway --port 8000` | 8000 |
+| Auth Service | `uvicorn auth_service:app --app-dir apigateway/auth-service --port 8100` | 8100 |
+| Inventory / Orders / Clients / Payments | `uvicorn backend_api:app --app-dir apigateway/<servicio> --port 9000 / 9100 / 9200 / 9300` | 9000–9300 |
+| GraphQL Gateway | `uvicorn server:app --app-dir graphql --port 8090` | 8090 |
+
+`python scripts/dev_local.py --real` hace todo lo anterior de una vez (salvo Vault, MongoDB y el broker, que deben estar corriendo): ejecuta el bootstrap de secretos y levanta cada proceso con su propio token de Vault. **Este modo `--real` no se ejecutó en el entorno de desarrollo** (no había binarios de Vault ni MongoDB); `python scripts/dev_local.py` sin opciones (base en memoria y secretos por entorno) es el que usan las pruebas.
 
 ## Guion de demostración de los flujos principales (≈5 minutos)
 
@@ -47,9 +61,9 @@ Evidencia equivalente ya capturada: `docs/evidencia/capturas/` y `resultados-nav
 
 ## Flujos complementarios y alcance
 
-* **Despacho, boletas y mensajería:** no aplican al caso (retiro en tienda) y no se implementan; ver Módulo 3.
+* **Mensajería:** aviso interno «pedido pagado» por STOMP (Módulo 3). **Despacho y boletas:** no aplican al caso (retiro en tienda).
 * **Restricciones tecnológicas del curso:** se mantienen PHP + Bootstrap + JavaScript en el front-end; el backend usa Python/FastAPI, MongoDB y Vault.
-* **Persistencia, esquema y datos de prueba:** MongoDB real en el despliegue (volumen `mongo-data`); los servicios crean sus **índices al arrancar** (colecciones sin esquema fijo; la validación está en el servicio); los datos de prueba se crean con `LR_SEED=1` (productos de `catalogo.json` y 5 usuarios ficticios). Dependencias con **versiones fijadas** en `backend/requirements.txt`; variables en `deploy/.env.example` sin valores reales.
+* **Persistencia, esquema y datos de prueba:** MongoDB real en el despliegue (volumen `mongo-data`); los servicios crean sus **índices al arrancar** (colecciones sin esquema fijo; la validación está en el servicio); los datos de prueba se crean con `LR_SEED=1` (productos de `catalogo.json` y 5 usuarios ficticios). Dependencias con **versiones fijadas** en `apigateway/requirements.txt`; variables en `deploy/.env.example` sin valores reales.
 * **Pruebas gRPC/analíticas:** no aplican (ver ADR del Módulo 9).
 
 ## Límites declarados de esta entrega

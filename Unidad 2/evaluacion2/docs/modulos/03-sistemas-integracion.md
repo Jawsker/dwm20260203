@@ -13,6 +13,7 @@
 | Orders | interno | gateway, payments, graphql | inventory, payments | HTTP/JSON | `edge/gateway__orders`, `edge/payments__orders`, `edge/graphql__orders` |
 | Payments | interno | gateway, orders | orders | HTTP/JSON | `edge/gateway__payments`, `edge/orders__payments` |
 | GraphQL | interno | gateway | orders, inventory, clients | HTTP/JSON (lectura) | `edge/gateway__graphql` |
+| Broker STOMP | infraestructura | orders (publica), consumidor de tienda (lee) | — | STOMP 1.2, cola `/queue/pedidos` | `stomp/broker` (usuario y clave) |
 | Vault | infraestructura | todos los servicios | — | HTTPS/JSON | token propio por servicio |
 | MongoDB | infraestructura | los 5 servicios con datos | — | MongoDB wire (`mongodb://…`) | usuario propio por servicio |
 
@@ -46,4 +47,12 @@ Producto y stock → **inventory**; pedido y su estado → **orders**; pago y au
 
 ### Sistemas complementarios del caso (despacho, boletas, mensajería)
 
-El caso Libre & Rico opera con **retiro en tienda**: no hay despacho. Tampoco se implementan boletas electrónicas ni mensajería (correo/WhatsApp) automáticas: se declaran **fuera del alcance de esta entrega** y como mejora futura (un servicio de notificaciones que consuma el estado del pedido). Son proveedores externos, no servicios propios. El pago se integra con un proveedor externo representado por un adaptador de prueba.
+* **Mensajería interna (implementada):** cuando un pago se confirma, **Orders publica un evento `pedido_pagado`** en la cola STOMP `/queue/pedidos` (la misma cola y librería `stomp.py` del material del curso). Un **consumidor de tienda** (`stomp/consumidor.py`) lo recibe y avisa que hay un pedido para preparar. Reglas:
+  * el mensaje lleva solo `evento, id, estado, total, lineas, fecha`: **ningún dato personal**;
+  * la credencial del broker es la referencia `stomp/broker` en Vault y solo Orders puede leerla;
+  * entrega «a lo más una vez»: si el broker no responde, el aviso se pierde y queda una advertencia en el registro, pero **el pedido queda pagado igual** (el estado oficial vive en Orders, no en la cola);
+  * probado con un broker STOMP real en memoria (`tests/test_05_mensajeria_stomp.py`); en el despliegue el broker es RabbitMQ con el plugin STOMP, **no ejecutado** en el entorno de desarrollo.
+* **Despacho:** no aplica; el caso opera con **retiro en tienda**.
+* **Boletas electrónicas y avisos al cliente (correo/WhatsApp):** fuera del alcance de esta entrega; serían proveedores externos que consumirían la misma cola.
+* **Pagos:** proveedor externo representado por un adaptador de prueba (sandbox).
+

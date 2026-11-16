@@ -4,13 +4,13 @@
 
 ![Diagrama UML del gateway](../diagramas/gateway_uml.png)
 
-Orden fijo de controles por solicitud (`backend/gateway/main.py`):
+Orden fijo de controles por solicitud (`apigateway/gateway/gateway.py`):
 
-1. **Tabla de rutas explícita** (`routes.py`, S01–S26): lo que no está en la tabla responde 404/405; no existe «reenviar todo lo que empiece con /api».
+1. **Tabla de rutas explícita** (`routes.py`, S01–S27): lo que no está en la tabla responde 404/405; no existe «reenviar todo lo que empiece con /api».
 2. **Límite de solicitudes** por clase de ruta e IP (login 20/min, contacto 5/min, escritura 60/min, públicas 240/min; configurables) → `429` con `retry_after`.
 3. **Tamaño de cuerpo** máximo por ruta y `Content-Type: application/json` obligatorio → `413`/`415`.
 4. **Origen (CSRF):** en métodos que modifican, `Origin`/`Referer` debe estar en la lista permitida; además la cookie es `SameSite=Lax`.
-5. **Sesión:** la cookie `lr_session` se introspecciona en Auth en cada solicitud; el rol se lee **del usuario**, no de la sesión (un cambio de rol surte efecto de inmediato).
+5. **Sesión:** el token (cookie `lr_session` del navegador o cabecera `Authorization: Bearer` de un cliente que no es navegador) se introspecciona en Auth en cada solicitud; el rol se lee **del usuario**, no de la sesión (un cambio de rol surte efecto de inmediato).
 6. **Política de rol** por ruta → `401`/`403`.
 7. **Reenvío mínimo:** solo cabeceras en lista blanca por ruta; se descartan `X-Auth-*` que traiga el cliente y se inyectan los verificados; se añade la clave de arista (`edge/gateway__<destino>`).
 8. **Traducción de fallos:** `504` si el destino no responde a tiempo, `503` si no hay conexión, `502` si falla internamente; los 5xx controlados del destino (con `code`) se propagan sin exponer detalles.
@@ -43,7 +43,7 @@ Se usan **dos piezas con roles distintos**, no varios gateways de borde:
 
 | Clase | Ejemplos | Datos restringidos |
 |---|---|---|
-| Externa anónima | S01 S02 S03 S04 S10 S19 (webhook, autenticada por firma) | no (S03/S04/S10 reciben datos, no los devuelven a terceros) |
+| Externa anónima | S01 S02 S03 S04 S27 S10 S19 (webhook, autenticada por firma) | no (S03/S04/S10 reciben datos, no los devuelven a terceros) |
 | Externa autenticada | S05–S09 S12–S15 S17 S18 S20 | sí, solo para el titular |
 | Administrativa | S11 S16 S21–S26 | sí, según rol |
 | Interna | todas las `/internal/*` de los servicios; no existen en el gateway | — |

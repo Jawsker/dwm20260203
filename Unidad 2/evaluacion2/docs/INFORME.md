@@ -2,7 +2,7 @@
 
 **Caso:** Libre & Rico (panadería/pastelería sin gluten, venta web con retiro en tienda) · **Unidad 2** · Desarrollo Web y Móvil
 
-**Equipo (integrante único):** Matías Palma Santana · **Fecha:** 09-11-2026
+**Equipo (integrante único):** Matías Palma Santana · **Fecha:** 09-11-2026 · **Actualización:** 16-11-2026 (estructura y puertos como el material del curso, mensajería STOMP, token Bearer, paleta única en el front-end)
 
 **Versión del front-end integrada:** sitio PHP + Bootstrap + JavaScript del repositorio `dwm20260203` (commit base `f481908`), extendido en esta entrega con `assets/js/{api,cuenta,productos,pago,pedidos,admin}.js` y las pantallas `productos.php`, `pago.php`, `mis-pedidos.php`, `admin.php`, `contacto.php`. El archivo `api-dummy.js` (datos simulados) fue **eliminado**: todas las pantallas consumen el backend real.
 
@@ -10,10 +10,12 @@
 
 | Pieza | Dónde |
 |---|---|
-| Código de 7 servicios (gateway, auth, clients, inventory, orders, payments, graphql) | `backend/` |
+| API Gateway, Auth Service y los 4 backends privados (inventory, orders, clients, payments) | `apigateway/` |
+| GraphQL Gateway privado | `graphql/` |
+| Mensajería STOMP (productor en Orders, consumidor de tienda) | `stomp/`, `apigateway/common/lr_common/mensajeria.py` |
 | Front-end integrado | `frontend/` |
 | Despliegue reproducible (docker compose + Vault + MongoDB) | `deploy/`, `scripts/vault_bootstrap.py` |
-| Ejecución local sin Docker (para pruebas) | `scripts/dev_local.py` |
+| Ejecución local por procesos, cada pieza en su puerto (en memoria, o `--real` con Vault y MongoDB locales) | `scripts/dev_local.py` |
 | Pruebas automatizadas, de navegador y de carga | `tests/`, `scripts/carga.py` |
 | Informe por módulo (este documento) y evidencias | `docs/`, `docs/evidencia/` |
 
@@ -45,19 +47,23 @@
 
 ## Servicios y responsabilidades
 
-| Servicio | Puerto | Responsabilidad | Base propia | Expuesto al navegador |
-|---|---:|---|---|---|
-| API Gateway | 8000 | Único punto de entrada: sesión, rol, origen, tamaño, límite, enrutamiento y traducción de errores | no | **sí** (también el webhook del proveedor) |
-| Auth | 8001 | Cuentas, contraseñas (Argon2id), sesiones, bloqueo por intentos | `auth` | no |
-| Clients | 8002 | Perfil del cliente y mensajes de contacto | `clients` | no |
-| Inventory | 8003 | Catálogo, stock y reservas atómicas | `inventory` | no |
-| Orders | 8004 | Pedidos, precios del servidor, estados, expiración, idempotencia | `orders` | no |
-| Payments | 8005 | Intención de pago, sandbox, webhook firmado | `payments` | no |
-| GraphQL | 8006 | Agregación de lectura sin base propia | no | no (solo vía gateway) |
+| Servicio | Carpeta | Puerto | Responsabilidad | Base propia | Expuesto al navegador |
+|---|---|---:|---|---|---|
+| API Gateway | `apigateway/gateway/gateway.py` | 8000 | Único punto de entrada: sesión, rol, origen, tamaño, límite, enrutamiento y traducción de errores | no | **sí** (también el webhook del proveedor) |
+| Auth Service | `apigateway/auth-service/auth_service.py` | 8100 | Cuentas, contraseñas (Argon2id), sesiones, bloqueo por intentos | `auth` | no |
+| Inventory | `apigateway/inventory/backend_api.py` | 9000 | Catálogo, stock y reservas atómicas | `inventory` | no |
+| Orders | `apigateway/orders/backend_api.py` | 9100 | Pedidos, precios del servidor, estados, expiración, idempotencia; publica eventos STOMP | `orders` | no |
+| Clients | `apigateway/clients/backend_api.py` | 9200 | Perfil del cliente y mensajes de contacto | `clients` | no |
+| Payments | `apigateway/payments/backend_api.py` | 9300 | Intención de pago, sandbox, webhook firmado | `payments` | no |
+| GraphQL Gateway | `graphql/server.py` | 8090 | Agregación de lectura sin base propia | no | no (solo vía gateway) |
+| Mensajería | `stomp/productor.py`, `stomp/consumidor.py` | 61613 (broker) | Aviso «pedido pagado» en la cola `/queue/pedidos` | no | no |
+| Vault / MongoDB | infraestructura | 8200 / 27017 | Secretos / persistencia | — | no |
 
-## Matriz de servicios (26 operaciones externas)
+La distribución de carpetas y puertos sigue la del material del curso (`apigateway/gateway`, `apigateway/auth-service`, backends en 9000+, GraphQL en 8090, Vault en 8200, STOMP en 61613). Los puertos están definidos una sola vez en `apigateway/common/lr_common/ports.py`.
 
-Generada desde `backend/gateway/routes.py`, que es la tabla que el gateway ejecuta: lo documentado es lo implementado.
+## Matriz de servicios (27 operaciones externas)
+
+Generada desde `apigateway/gateway/routes.py`, que es la tabla que el gateway ejecuta: lo documentado es lo implementado.
 
 | ID | Requisito | Pantalla y acción | Propósito | Verbo y ruta | Entrada | Salida y errores | Clasificación | Acceso |
 |---|---|---|---|---|---|---|---|---|
@@ -87,8 +93,11 @@ Generada desde `backend/gateway/routes.py`, que es la tabla que el gateway ejecu
 | S24 | RF10 | P05 · Guardar stock | Ajustar stock físico | `PUT /api/v1/admin/products/{product_id}/stock` (Modificar) | body: stock 0-100000 | 200 producto; 409 stock_below_reserved; 404; 403 | Dato interno | autenticado (Personal, Admin.) |
 | S25 | RF13 | (API) · alta de personal | Crear cuentas de personal, auditoría o administración | `POST /api/v1/admin/users` (Agregar/acción) | body: email, password, role ∈ {staff,auditor,admin} | 201 {user_id,role}; 409 email_taken; 403 | Credencial | autenticado (Admin.) |
 | S26 | RF4 | (API) · mantenimiento | Expirar pedidos vencidos y liberar stock | `POST /api/v1/admin/maintenance/sweep` (Agregar/acción) | — | 200 {expired,released_retried,commits_retried}; 403 | Dato interno | autenticado (Admin.) |
+| S27 | RF6 | (API) · clientes que no son navegador | Autenticar y obtener un token Bearer | `POST /api/v1/auth/token` (Agregar/acción) | body: email, password | 200 {access_token,token_type,expires_in,user} sin cookie; 401 invalid_credentials; 429 | Credencial | anónimo |
 
 ## Formato común de contratos
+
+* **Autenticación:** el sitio usa una cookie de sesión `HttpOnly` (S04). Para clientes que no son navegador (curl, Postman) existe S27 `POST /auth/token`, que entrega el mismo token como `Bearer` y **no** crea cookie; el gateway acepta `Authorization: Bearer <token>` con exactamente los mismos controles de sesión y rol.
 
 * JSON (UTF-8); fechas ISO-8601 en UTC con `Z`; dinero en **pesos chilenos enteros** (sin decimales).
 * Todo error tiene la misma forma: `{"error": {"code": "...", "message": "...", "correlation_id": "...", "details": [...]}}`. Los mensajes no revelan detalles internos ni distinguen «correo inexistente» de «clave errónea».
@@ -119,13 +128,13 @@ Errores: `400 duplicate_items | validation_error` · `401` · `403` (rol no clie
 
 **S20 · `POST /api/v1/graphql`** — ver Módulo 8, con ejemplos reales de consulta y respuesta.
 
-## Ejemplo JSON de cada contrato (S01–S26)
+## Ejemplo JSON de cada contrato (S01–S27)
 
 Cada operación se ejecutó contra el sistema con **datos ficticios**; abajo están las solicitudes y respuestas reales (cookies y firmas redactadas). Incluyen casos de error representativos (filtro inválido, credenciales inválidas, pedido ajeno, firma falsa). Se regeneran con `python scripts/ejemplos_contratos.py`.
 
 **Qué envía el navegador y qué decide el servidor:** el navegador envía solo ids y cantidades (S12), credenciales (S03/S04) y campos de perfil (S08). El servidor calcula precios, total y estados, fija el rol, fija el dueño del recurso (sale de la sesión, nunca de un parámetro) y decide si un pago está confirmado. Los precios, totales y estados de pago que un cliente intente enviar se ignoran (prueba `test_V6_*`).
 
-# Ejemplos reales de contratos S01–S26 (Módulo 1)
+# Ejemplos reales de contratos S01–S27 (Módulo 1)
 
 Generado por `python scripts/ejemplos_contratos.py` ejecutando cada operación contra el stack local con **datos ficticios**. Ids, fechas y referencias son de esa ejecución; cookies y firmas se redactan.
 
@@ -172,7 +181,7 @@ Respuesta **400**:
   "error": {
     "code": "invalid_filter",
     "message": "Categoría desconocida.",
-    "correlation_id": "9c2710f0ea81436c"
+    "correlation_id": "5244515639944fb8"
   }
 }
 ```
@@ -197,7 +206,7 @@ Respuesta **200**:
 Solicitud:
 ```json
 {
-  "email": "cliente-b4de@ejemplo.cl",
+  "email": "cliente-8771@ejemplo.cl",
   "password": "Clave-ficticia-123",
   "nombre": "Cliente Ficticio",
   "telefono": "+56 9 1234 5678"
@@ -207,8 +216,8 @@ Respuesta **201**:
 ```json
 {
   "user": {
-    "id": "u_24774c0819e0",
-    "email": "cliente-b4de@ejemplo.cl",
+    "id": "u_a69d73c3c700",
+    "email": "cliente-8771@ejemplo.cl",
     "role": "customer"
   }
 }
@@ -229,7 +238,7 @@ Respuesta **401**:
   "error": {
     "code": "invalid_credentials",
     "message": "Correo o contraseña incorrectos.",
-    "correlation_id": "89973e0a947a4850"
+    "correlation_id": "0a98fa3cf6e44f12"
   }
 }
 ```
@@ -246,9 +255,9 @@ null
 Respuesta **200**:
 ```json
 {
-  "user_id": "u_24774c0819e0",
+  "user_id": "u_a69d73c3c700",
   "role": "customer",
-  "email": "cliente-b4de@ejemplo.cl"
+  "email": "cliente-8771@ejemplo.cl"
 }
 ```
 
@@ -257,7 +266,7 @@ Respuesta **200**:
 Respuesta **200**:
 ```json
 {
-  "id": "u_24774c0819e0",
+  "id": "u_a69d73c3c700",
   "nombre": "Cliente Ficticio",
   "telefono": "+56 9 1234 5678",
   "direccion": null
@@ -275,7 +284,7 @@ Solicitud:
 Respuesta **200**:
 ```json
 {
-  "id": "u_24774c0819e0",
+  "id": "u_a69d73c3c700",
   "nombre": "Cliente Ficticio",
   "telefono": "+56 9 1234 5678",
   "direccion": "Calle Ficticia 123, Santiago"
@@ -302,7 +311,7 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "id": "4dcb5a347875",
+  "id": "26704b9fd1b9",
   "status": "nuevo"
 }
 ```
@@ -314,12 +323,12 @@ Respuesta **200**:
 {
   "items": [
     {
-      "id": "4dcb5a347875",
+      "id": "26704b9fd1b9",
       "nombre": "Visitante Ficticio",
       "correo": "visita@ejemplo.cl",
       "mensaje": "¿Tienen pan sin gluten por encargo?",
       "status": "nuevo",
-      "created_at": "2026-11-10T03:00:10Z"
+      "created_at": "2026-11-16T15:30:42Z"
     }
   ]
 }
@@ -348,12 +357,12 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "id": "LR-50E6A1E0",
+  "id": "LR-12730330",
   "status": "awaiting_payment",
   "total": 9370,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:10Z",
-  "expires_at": "2026-11-10T03:15:10Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p01",
@@ -395,12 +404,12 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "id": "LR-19A5F149",
+  "id": "LR-01550049",
   "status": "awaiting_payment",
   "total": 3490,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:11Z",
-  "expires_at": "2026-11-10T03:15:11Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p02",
@@ -419,17 +428,17 @@ Respuesta **201**:
 }
 ```
 
-## S13 · `GET /api/v1/orders/LR-50E6A1E0`
+## S13 · `GET /api/v1/orders/LR-12730330`
 
 Respuesta **200**:
 ```json
 {
-  "id": "LR-50E6A1E0",
+  "id": "LR-12730330",
   "status": "awaiting_payment",
   "total": 9370,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:10Z",
-  "expires_at": "2026-11-10T03:15:10Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p01",
@@ -455,7 +464,7 @@ Respuesta **200**:
 }
 ```
 
-## S13 · `GET /api/v1/orders/LR-50E6A1E0` — otro cliente → no ve datos
+## S13 · `GET /api/v1/orders/LR-12730330` — otro cliente → no ve datos
 
 Respuesta **404**:
 ```json
@@ -463,34 +472,34 @@ Respuesta **404**:
   "error": {
     "code": "not_found",
     "message": "Pedido no encontrado.",
-    "correlation_id": "85d982c2c4164e56"
+    "correlation_id": "287692c4fbc54bc1"
   }
 }
 ```
 
-## S14 · `POST /api/v1/orders/LR-50E6A1E0/pay`
+## S14 · `POST /api/v1/orders/LR-12730330/pay`
 
 Respuesta **200**:
 ```json
 {
-  "order_id": "LR-50E6A1E0",
-  "payment_id": "pay_32c83965d844927f",
-  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "order_id": "LR-12730330",
+  "payment_id": "pay_c8f653a783a4f210",
+  "provider_ref": "sbx_kDMu1tJPD0CEWGd7NhvOrA",
   "amount": 9370
 }
 ```
 
-## S15 · `POST /api/v1/orders/LR-19A5F149/cancel`
+## S15 · `POST /api/v1/orders/LR-01550049/cancel`
 
 Respuesta **200**:
 ```json
 {
-  "id": "LR-19A5F149",
+  "id": "LR-01550049",
   "status": "cancelled",
   "total": 3490,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:11Z",
-  "expires_at": "2026-11-10T03:15:11Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p02",
@@ -509,7 +518,7 @@ Respuesta **200**:
 }
 ```
 
-## S16 · `POST /api/v1/admin/orders/LR-50E6A1E0/status`
+## S16 · `POST /api/v1/admin/orders/LR-12730330/status`
 
 Solicitud:
 ```json
@@ -520,12 +529,12 @@ Solicitud:
 Respuesta **200**:
 ```json
 {
-  "id": "LR-50E6A1E0",
+  "id": "LR-12730330",
   "status": "preparing",
   "total": 9370,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:10Z",
-  "expires_at": "2026-11-10T03:15:10Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p01",
@@ -551,20 +560,20 @@ Respuesta **200**:
 }
 ```
 
-## S17 · `GET /api/v1/payments/sbx_n15zdgl0aAOdhbOCYDXnFg`
+## S17 · `GET /api/v1/payments/sbx_kDMu1tJPD0CEWGd7NhvOrA`
 
 Respuesta **200**:
 ```json
 {
-  "payment_id": "pay_32c83965d844927f",
-  "order_id": "LR-50E6A1E0",
+  "payment_id": "pay_c8f653a783a4f210",
+  "order_id": "LR-12730330",
   "amount": 9370,
   "currency": "CLP",
   "status": "pending"
 }
 ```
 
-## S18 · `POST /api/v1/payments/sbx_n15zdgl0aAOdhbOCYDXnFg/sandbox-decision`
+## S18 · `POST /api/v1/payments/sbx_kDMu1tJPD0CEWGd7NhvOrA/sandbox-decision`
 
 Solicitud:
 ```json
@@ -575,7 +584,7 @@ Solicitud:
 Respuesta **200**:
 ```json
 {
-  "event_id": "evt_50aa4ae980bed08e",
+  "event_id": "evt_2f702b96da7d6bb5",
   "webhook_status": 200
 }
 ```
@@ -587,9 +596,9 @@ Cabeceras relevantes: `{"X-Provider-Signature": "t=<epoch>,v1=<hmac-sha256 redac
 Solicitud:
 ```json
 {
-  "event_id": "evt_demo_0f7efe",
+  "event_id": "evt_demo_6e0b08",
   "type": "payment.succeeded",
-  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "provider_ref": "sbx_kDMu1tJPD0CEWGd7NhvOrA",
   "amount": 9370
 }
 ```
@@ -607,9 +616,9 @@ Cabeceras relevantes: `{"X-Provider-Signature": "t=<epoch>,v1=firma-falsa"}`
 Solicitud:
 ```json
 {
-  "event_id": "evt_demo_0f7efe",
+  "event_id": "evt_demo_6e0b08",
   "type": "payment.succeeded",
-  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "provider_ref": "sbx_kDMu1tJPD0CEWGd7NhvOrA",
   "amount": 9370
 }
 ```
@@ -619,7 +628,7 @@ Respuesta **401**:
   "error": {
     "code": "invalid_signature",
     "message": "Firma del webhook inválida o vencida.",
-    "correlation_id": "7e05d9a5f7b841e9"
+    "correlation_id": "7adedcd7024e48b5"
   }
 }
 ```
@@ -640,7 +649,7 @@ Respuesta **200**:
       "total": 1,
       "items": [
         {
-          "id": "LR-50E6A1E0",
+          "id": "LR-12730330",
           "estado": "preparing",
           "total": 9370,
           "lineas": [
@@ -789,7 +798,7 @@ Respuesta **200**:
 Solicitud:
 ```json
 {
-  "email": "personal-8e77@libreyrico.test",
+  "email": "personal-d39a@libreyrico.test",
   "password": "Clave-ficticia-123",
   "role": "staff"
 }
@@ -797,7 +806,7 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "user_id": "u_55a856f082a7",
+  "user_id": "u_1d4abca1def9",
   "role": "staff"
 }
 ```
@@ -810,6 +819,49 @@ Respuesta **200**:
   "expired": 0,
   "released_retried": 0,
   "commits_retried": 0
+}
+```
+
+## S27 · `POST /api/v1/auth/token` — forma del contrato; contraseña redactada → 401
+
+Solicitud:
+```json
+{
+  "email": "beto@ejemplo.cl",
+  "password": "<contraseña de prueba>"
+}
+```
+Respuesta **401**:
+```json
+{
+  "error": {
+    "code": "invalid_credentials",
+    "message": "Correo o contraseña incorrectos.",
+    "correlation_id": "14bf296402d14a84"
+  }
+}
+```
+
+## S27 · `POST /api/v1/auth/token` — credenciales correctas (token redactado)
+
+Solicitud:
+```json
+{
+  "email": "beto@ejemplo.cl",
+  "password": "<redactada>"
+}
+```
+Respuesta **200**:
+```json
+{
+  "access_token": "<token opaco redactado>",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "user": {
+    "id": "u_beto",
+    "email": "beto@ejemplo.cl",
+    "role": "customer"
+  }
 }
 ```
 
@@ -856,9 +908,9 @@ Fuente editable: `docs/diagramas/dominio.mmd`. Cada entidad está marcada con el
 
 Fuente editable: `docs/diagramas/servicios_publicos.mmd`.
 
-**Leyenda de notación.** `«service»` = servicio con las operaciones de la matriz del Módulo 1 (cada operación lleva su ID S01–S26). Línea con rombo lleno = composición; línea simple = asociación con multiplicidades; **flecha punteada = dependencia de uso** (el servicio usa la clase o a otro servicio; *no* significa relación entre registros de negocio). Los sufijos `DTO` son los objetos que cruzan la frontera hacia el navegador.
+**Leyenda de notación.** `«service»` = servicio con las operaciones de la matriz del Módulo 1 (cada operación lleva su ID S01–S27). Línea con rombo lleno = composición; línea simple = asociación con multiplicidades; **flecha punteada = dependencia de uso** (el servicio usa la clase o a otro servicio; *no* significa relación entre registros de negocio). Los sufijos `DTO` son los objetos que cruzan la frontera hacia el navegador.
 
-**Correspondencia operación UML → ID de servicio:** `InventoryService`: S01 S02 S21 S22 S23 S24 · `AuthService`: S03 S04 S05 S06 S25 · `ClientService`: S07 S08 S09 S10 S11 · `OrderService`: S12 S13 S14 S15 S16 S26 · `PaymentService`: S17 S18 S19 · `GraphQLGateway`: S20. (S09 «eliminar cuenta» la orquesta el gateway: Auth + Clients + anonimización en Orders.)
+**Correspondencia operación UML → ID de servicio:** `InventoryService`: S01 S02 S21 S22 S23 S24 · `AuthService`: S03 S04 S05 S06 S25 S27 · `ClientService`: S07 S08 S09 S10 S11 · `OrderService`: S12 S13 S14 S15 S16 S26 · `PaymentService`: S17 S18 S19 · `GraphQLGateway`: S20. (S09 «eliminar cuenta» la orquesta el gateway: Auth + Clients + anonimización en Orders.)
 
 ### Tabla de relaciones (origen → destino)
 
@@ -896,6 +948,7 @@ Fuente editable: `docs/diagramas/servicios_publicos.mmd`.
 | Orders | interno | gateway, payments, graphql | inventory, payments | HTTP/JSON | `edge/gateway__orders`, `edge/payments__orders`, `edge/graphql__orders` |
 | Payments | interno | gateway, orders | orders | HTTP/JSON | `edge/gateway__payments`, `edge/orders__payments` |
 | GraphQL | interno | gateway | orders, inventory, clients | HTTP/JSON (lectura) | `edge/gateway__graphql` |
+| Broker STOMP | infraestructura | orders (publica), consumidor de tienda (lee) | — | STOMP 1.2, cola `/queue/pedidos` | `stomp/broker` (usuario y clave) |
 | Vault | infraestructura | todos los servicios | — | HTTPS/JSON | token propio por servicio |
 | MongoDB | infraestructura | los 5 servicios con datos | — | MongoDB wire (`mongodb://…`) | usuario propio por servicio |
 
@@ -929,7 +982,14 @@ Producto y stock → **inventory**; pedido y su estado → **orders**; pago y au
 
 ### Sistemas complementarios del caso (despacho, boletas, mensajería)
 
-El caso Libre & Rico opera con **retiro en tienda**: no hay despacho. Tampoco se implementan boletas electrónicas ni mensajería (correo/WhatsApp) automáticas: se declaran **fuera del alcance de esta entrega** y como mejora futura (un servicio de notificaciones que consuma el estado del pedido). Son proveedores externos, no servicios propios. El pago se integra con un proveedor externo representado por un adaptador de prueba.
+* **Mensajería interna (implementada):** cuando un pago se confirma, **Orders publica un evento `pedido_pagado`** en la cola STOMP `/queue/pedidos` (la misma cola y librería `stomp.py` del material del curso). Un **consumidor de tienda** (`stomp/consumidor.py`) lo recibe y avisa que hay un pedido para preparar. Reglas:
+  * el mensaje lleva solo `evento, id, estado, total, lineas, fecha`: **ningún dato personal**;
+  * la credencial del broker es la referencia `stomp/broker` en Vault y solo Orders puede leerla;
+  * entrega «a lo más una vez»: si el broker no responde, el aviso se pierde y queda una advertencia en el registro, pero **el pedido queda pagado igual** (el estado oficial vive en Orders, no en la cola);
+  * probado con un broker STOMP real en memoria (`tests/test_05_mensajeria_stomp.py`); en el despliegue el broker es RabbitMQ con el plugin STOMP, **no ejecutado** en el entorno de desarrollo.
+* **Despacho:** no aplica; el caso opera con **retiro en tienda**.
+* **Boletas electrónicas y avisos al cliente (correo/WhatsApp):** fuera del alcance de esta entrega; serían proveedores externos que consumirían la misma cola.
+* **Pagos:** proveedor externo representado por un adaptador de prueba (sandbox).
 
 ---
 
@@ -979,6 +1039,7 @@ El caso Libre & Rico opera con **retiro en tienda**: no hay despacho. Tampoco se
 | S24 | `PUT /api/v1/admin/products/{product_id}/stock` | 401 | 403 | ✔ | ✔ | 403 | Personal/administración |
 | S25 | `POST /api/v1/admin/users` | 401 | 403 | 403 | ✔ | 403 | Solo administración |
 | S26 | `POST /api/v1/admin/maintenance/sweep` | 401 | 403 | 403 | ✔ | 403 | Solo administración |
+| S27 | `POST /api/v1/auth/token` | ✔ | ✔ | ✔ | ✔ | ✔ | — |
 
 **Defensa en profundidad:** el gateway filtra por rol (primera capa) y el servicio dueño **vuelve a verificar** rol y propiedad con la identidad que le llega firmada por clave de arista (segunda capa). Un servicio privado rechaza llamadas sin clave de arista (401) y descarta cualquier `X-Auth-User/Role` que no venga del gateway o de graphql.
 
@@ -1020,13 +1081,13 @@ La **identidad** (quién eres: sesión o clave de servicio) se separa de la **au
 
 ![Diagrama UML del gateway](diagramas/gateway_uml.png)
 
-Orden fijo de controles por solicitud (`backend/gateway/main.py`):
+Orden fijo de controles por solicitud (`apigateway/gateway/gateway.py`):
 
-1. **Tabla de rutas explícita** (`routes.py`, S01–S26): lo que no está en la tabla responde 404/405; no existe «reenviar todo lo que empiece con /api».
+1. **Tabla de rutas explícita** (`routes.py`, S01–S27): lo que no está en la tabla responde 404/405; no existe «reenviar todo lo que empiece con /api».
 2. **Límite de solicitudes** por clase de ruta e IP (login 20/min, contacto 5/min, escritura 60/min, públicas 240/min; configurables) → `429` con `retry_after`.
 3. **Tamaño de cuerpo** máximo por ruta y `Content-Type: application/json` obligatorio → `413`/`415`.
 4. **Origen (CSRF):** en métodos que modifican, `Origin`/`Referer` debe estar en la lista permitida; además la cookie es `SameSite=Lax`.
-5. **Sesión:** la cookie `lr_session` se introspecciona en Auth en cada solicitud; el rol se lee **del usuario**, no de la sesión (un cambio de rol surte efecto de inmediato).
+5. **Sesión:** el token (cookie `lr_session` del navegador o cabecera `Authorization: Bearer` de un cliente que no es navegador) se introspecciona en Auth en cada solicitud; el rol se lee **del usuario**, no de la sesión (un cambio de rol surte efecto de inmediato).
 6. **Política de rol** por ruta → `401`/`403`.
 7. **Reenvío mínimo:** solo cabeceras en lista blanca por ruta; se descartan `X-Auth-*` que traiga el cliente y se inyectan los verificados; se añade la clave de arista (`edge/gateway__<destino>`).
 8. **Traducción de fallos:** `504` si el destino no responde a tiempo, `503` si no hay conexión, `502` si falla internamente; los 5xx controlados del destino (con `code`) se propagan sin exponer detalles.
@@ -1059,7 +1120,7 @@ Se usan **dos piezas con roles distintos**, no varios gateways de borde:
 
 | Clase | Ejemplos | Datos restringidos |
 |---|---|---|
-| Externa anónima | S01 S02 S03 S04 S10 S19 (webhook, autenticada por firma) | no (S03/S04/S10 reciben datos, no los devuelven a terceros) |
+| Externa anónima | S01 S02 S03 S04 S27 S10 S19 (webhook, autenticada por firma) | no (S03/S04/S10 reciben datos, no los devuelven a terceros) |
 | Externa autenticada | S05–S09 S12–S15 S17 S18 S20 | sí, solo para el titular |
 | Administrativa | S11 S16 S21–S26 | sí, según rol |
 | Interna | todas las `/internal/*` de los servicios; no existen en el gateway | — |
@@ -1101,7 +1162,7 @@ Generada desde `routes.py`. «Referencia de credencial» es el nombre simbólico
 | S01 | Gateway externo | GET | `/api/v1/products` | anónimo | inventory: `GET /internal/products` | límite «public»; cuerpo ≤ 4096 B; filtros validados (400), paginación acotada, solo campos de catálogo | edge/gateway__inventory |
 | S02 | Gateway externo | GET | `/api/v1/products/{product_id}` | anónimo | inventory: `GET /internal/products/{product_id}` | límite «public»; cuerpo ≤ 4096 B; id acotado a [A-Za-z0-9_.-]{1,80} | edge/gateway__inventory |
 | S03 | Gateway externo | POST | `/api/v1/auth/register` | anónimo | orquestación en gateway (`register`) | límite «login»; cuerpo ≤ 1024 B; el rol nunca viene del cliente; compensación si falla clients | edge/gateway__auth, edge/gateway__clients |
-| S04 | Gateway externo | POST | `/api/v1/auth/login` | anónimo | orquestación en gateway (`login`) | límite «login»; cuerpo ≤ 512 B; bloqueo por intentos, cookie HttpOnly, token jamás en el cuerpo | edge/gateway__auth |
+| S04 | Gateway externo | POST | `/api/v1/auth/login` | anónimo | orquestación en gateway (`login`) | límite «login»; cuerpo ≤ 512 B; bloqueo por intentos, cookie HttpOnly, token jamás en el cuerpo de esta ruta | edge/gateway__auth |
 | S05 | Gateway externo | POST | `/api/v1/auth/logout` | sesión · Cliente, Personal, Admin., Auditoría | orquestación en gateway (`logout`) | límite «auth»; cuerpo ≤ 0 B; revocación inmediata de la sesión | edge/gateway__auth |
 | S06 | Gateway externo | GET | `/api/v1/auth/session` | sesión · Cliente, Personal, Admin., Auditoría | orquestación en gateway (`session`) | límite «auth»; cuerpo ≤ 4096 B; validación en el servicio | edge/gateway__auth |
 | S07 | Gateway externo | GET | `/api/v1/clients/me` | sesión · Cliente | clients: `GET /internal/clients/me` | límite «auth»; cuerpo ≤ 4096 B; el id sale de la sesión, no de la URL | edge/gateway__clients |
@@ -1124,6 +1185,7 @@ Generada desde `routes.py`. «Referencia de credencial» es el nombre simbólico
 | S24 | Gateway externo | PUT | `/api/v1/admin/products/{product_id}/stock` | sesión · Personal, Admin. | inventory: `PUT /internal/products/{product_id}/stock` | límite «auth»; cuerpo ≤ 128 B; validación en el servicio | edge/gateway__inventory |
 | S25 | Gateway externo | POST | `/api/v1/admin/users` | sesión · Admin. | auth: `POST /internal/users` | límite «auth»; cuerpo ≤ 512 B; crea personal/auditoría; solo administración | edge/gateway__auth |
 | S26 | Gateway externo | POST | `/api/v1/admin/maintenance/sweep` | sesión · Admin. | orders: `POST /internal/orders/maintenance/sweep` | límite «auth»; cuerpo ≤ 0 B; expira pedidos y libera stock | edge/gateway__orders |
+| S27 | Gateway externo | POST | `/api/v1/auth/token` | anónimo | orquestación en gateway (`token`) | límite «login»; cuerpo ≤ 512 B; bloqueo por intentos; entrega token Bearer sin cookie (clientes que no son navegador) | edge/gateway__auth |
 
 ## Inventario de secretos (referencias simbólicas)
 
@@ -1149,6 +1211,7 @@ Generado desde `scripts/topology.py`. Los valores los crea `vault_bootstrap.py` 
 | `db/orders` | credencial de base de datos | bootstrap (usuario Mongo `svc_orders`) | orders | conexión de `orders` a su base `orders` | Vault KV `secret/lr/db/orders` | readWrite solo sobre la base `orders` | rotar: repetir bootstrap (updateUser); revocar: eliminar usuario Mongo |
 | `db/payments` | credencial de base de datos | bootstrap (usuario Mongo `svc_payments`) | payments | conexión de `payments` a su base `payments` | Vault KV `secret/lr/db/payments` | readWrite solo sobre la base `payments` | rotar: repetir bootstrap (updateUser); revocar: eliminar usuario Mongo |
 | `payments/webhook` | secreto de firma de webhooks (HMAC-SHA256) | bootstrap (con proveedor real: panel del proveedor) | payments (verifica y, en sandbox, firma) | autenticar eventos del proveedor de pagos | Vault KV `secret/lr/payments/webhook` | solo `payments`; el navegador nunca lo recibe | rotar: nuevo secreto + ventana de doble verificación; revocar: eliminarlo (webhooks pasan a 401) |
+| `stomp/broker` | usuario y clave del broker STOMP | `deploy/.env` → bootstrap (el broker arranca con la misma) | orders (publica eventos de pedido pagado) | publicar en `/queue/pedidos` | Vault KV `secret/lr/stomp/broker` | solo `orders`; el consumidor de tienda usa su propia variable de entorno | rotar: cambiar en `.env`, recrear broker y repetir bootstrap; revocar: eliminar el usuario del broker (los eventos dejan de publicarse, los pedidos siguen) |
 | `vault/token/<servicio>` | token de Vault con política de solo lectura | bootstrap (token raíz solo en el contenedor bootstrap) | cada servicio, su propio token | leer únicamente sus referencias | volumen de Docker montado solo en ese servicio (`/run/token/token`) | política `lr-<servicio>`: capabilities=[read] sobre sus rutas | TTL 720 h; en producción AppRole/identidad de plataforma con renovación; revocar: `vault token revoke` |
 | `cookie lr_session` | credencial del USUARIO (token de sesión opaco) | Auth Service al iniciar sesión | gateway (la valida con Auth) | sesión del navegador | navegador: cookie HttpOnly; servidor: SHA-256 en la base de Auth | el rol del usuario | inactividad 30 min, absoluta 8 h; revocada al cerrar sesión o eliminar cuenta |
 
@@ -1205,47 +1268,51 @@ Un único punto externo (`POST /api/v1/graphql`, S20) hacia el servicio `graphql
 
 Las pruebas **V1–V6** son las validaciones pedidas para este módulo; el resto cubre el comportamiento restante. Tabla completa generada desde `junit.xml` (ejecutada con `python scripts/generar_docs.py --pruebas`):
 
-**37/37 pruebas OK** (fuente: `docs/evidencia/junit.xml`, generado por pytest).
+**41/41 pruebas OK** (fuente: `docs/evidencia/junit.xml`, generado por pytest).
 
 | Prueba | Qué verifica (entrada · identidad · esperado · componente) | Resultado | Tiempo |
 |---|---|---|---|
-| `test_01_validacion_modulo7::test_V1_acceso_anonimo_al_catalogo` | V1 · entrada: GET /products · identidad: anónimo · esperado: 200 con campos de catálogo, sin stock exacto. | OK | 3.24 s |
+| `test_01_validacion_modulo7::test_V1_acceso_anonimo_al_catalogo` | V1 · entrada: GET /products · identidad: anónimo · esperado: 200 con campos de catálogo, sin stock exacto. | OK | 2.64 s |
 | `test_01_validacion_modulo7::test_V2_operacion_protegida_sin_sesion` | V2 · entrada: POST /orders, GET /clients/me, POST /graphql · identidad: sin cookie · esperado: 401. | OK | 0.01 s |
 | `test_01_validacion_modulo7::test_V2b_cookie_invalida_es_401` | V2b cookie invalida es 401 | OK | 0.03 s |
-| `test_01_validacion_modulo7::test_V3_administracion_con_rol_sin_permiso` | V3 · entrada: operaciones de administración · identidad: customer/staff/auditor · esperado: 403. | OK | 0.51 s |
-| `test_01_validacion_modulo7::test_V4_pedido_ajeno_no_devuelve_datos` | V4 · entrada: GET /orders/{id} y resumenPedido(id) · identidad: Beto sobre pedido de Ana · esperado: 404 sin datos; | OK | 0.32 s |
-| `test_01_validacion_modulo7::test_V5_acceso_directo_al_backend_sin_identidad` | V5 · entrada: llamadas directas a los puertos de servicios privados · identidad: ninguna / clave falsa / cabeceras | OK | 0.15 s |
-| `test_01_validacion_modulo7::test_V6_confirmar_pago_con_datos_alterados` | V6 · entrada: precio/total/estado alterados en la solicitud, endpoints de 'confirmación' inventados, webhooks falsificados, | OK | 0.38 s |
-| `test_02_flujos_y_reglas::test_registro_login_logout_y_cookie_segura` | registro login logout y cookie segura | OK | 0.45 s |
-| `test_02_flujos_y_reglas::test_login_generico_y_bloqueo_por_intentos` | login generico y bloqueo por intentos | OK | 6.68 s |
+| `test_01_validacion_modulo7::test_V3_administracion_con_rol_sin_permiso` | V3 · entrada: operaciones de administración · identidad: customer/staff/auditor · esperado: 403. | OK | 0.39 s |
+| `test_01_validacion_modulo7::test_V4_pedido_ajeno_no_devuelve_datos` | V4 · entrada: GET /orders/{id} y resumenPedido(id) · identidad: Beto sobre pedido de Ana · esperado: 404 sin datos; | OK | 0.24 s |
+| `test_01_validacion_modulo7::test_V5_acceso_directo_al_backend_sin_identidad` | V5 · entrada: llamadas directas a los puertos de servicios privados · identidad: ninguna / clave falsa / cabeceras | OK | 0.10 s |
+| `test_01_validacion_modulo7::test_V6_confirmar_pago_con_datos_alterados` | V6 · entrada: precio/total/estado alterados en la solicitud, endpoints de 'confirmación' inventados, webhooks falsificados, | OK | 0.28 s |
+| `test_01_validacion_modulo7::test_token_bearer_para_clientes_que_no_son_navegador` | S27 · entrada: POST /auth/token y luego Authorization: Bearer · identidad: cliente · esperado: mismo control de sesión y rol que con cookie; sin cookie emitida; token inválido → 401 · componente: gateway + auth. | OK | 0.39 s |
+| `test_02_flujos_y_reglas::test_registro_login_logout_y_cookie_segura` | registro login logout y cookie segura | OK | 0.40 s |
+| `test_02_flujos_y_reglas::test_login_generico_y_bloqueo_por_intentos` | login generico y bloqueo por intentos | OK | 6.60 s |
 | `test_02_flujos_y_reglas::test_csrf_origen_y_tipo_de_contenido` | csrf origen y tipo de contenido | OK | 0.04 s |
-| `test_02_flujos_y_reglas::test_rutas_inexistentes_y_verbos_no_permitidos` | rutas inexistentes y verbos no permitidos | OK | 0.02 s |
-| `test_02_flujos_y_reglas::test_formulario_de_contacto_y_limite_de_solicitudes` | formulario de contacto y limite de solicitudes | OK | 0.06 s |
-| `test_02_flujos_y_reglas::test_flujo_completo_pedido_pago_y_preparacion` | flujo completo pedido pago y preparacion | OK | 0.18 s |
-| `test_02_flujos_y_reglas::test_pago_rechazado_conserva_pedido_y_permite_reintento` | pago rechazado conserva pedido y permite reintento | OK | 0.15 s |
-| `test_02_flujos_y_reglas::test_cancelar_libera_el_stock` | cancelar libera el stock | OK | 0.07 s |
-| `test_02_flujos_y_reglas::test_stock_insuficiente_y_validaciones_del_pedido` | stock insuficiente y validaciones del pedido | OK | 0.09 s |
-| `test_02_flujos_y_reglas::test_concurrencia_no_se_vende_mas_de_lo_que_hay` | concurrencia no se vende mas de lo que hay | OK | 0.12 s |
-| `test_02_flujos_y_reglas::test_idempotency_key_no_duplica_pedidos` | idempotency key no duplica pedidos | OK | 0.05 s |
-| `test_02_flujos_y_reglas::test_expiracion_libera_stock_y_pago_tardio_requiere_reembolso` | expiracion libera stock y pago tardio requiere reembolso | OK | 6.66 s |
-| `test_02_flujos_y_reglas::test_panel_de_administracion_y_productos` | panel de administracion y productos | OK | 0.30 s |
+| `test_02_flujos_y_reglas::test_rutas_inexistentes_y_verbos_no_permitidos` | rutas inexistentes y verbos no permitidos | OK | 0.04 s |
+| `test_02_flujos_y_reglas::test_formulario_de_contacto_y_limite_de_solicitudes` | formulario de contacto y limite de solicitudes | OK | 0.05 s |
+| `test_02_flujos_y_reglas::test_flujo_completo_pedido_pago_y_preparacion` | flujo completo pedido pago y preparacion | OK | 0.13 s |
+| `test_02_flujos_y_reglas::test_pago_rechazado_conserva_pedido_y_permite_reintento` | pago rechazado conserva pedido y permite reintento | OK | 0.11 s |
+| `test_02_flujos_y_reglas::test_cancelar_libera_el_stock` | cancelar libera el stock | OK | 0.06 s |
+| `test_02_flujos_y_reglas::test_stock_insuficiente_y_validaciones_del_pedido` | stock insuficiente y validaciones del pedido | OK | 0.08 s |
+| `test_02_flujos_y_reglas::test_concurrencia_no_se_vende_mas_de_lo_que_hay` | concurrencia no se vende mas de lo que hay | OK | 0.09 s |
+| `test_02_flujos_y_reglas::test_idempotency_key_no_duplica_pedidos` | idempotency key no duplica pedidos | OK | 0.04 s |
+| `test_02_flujos_y_reglas::test_expiracion_libera_stock_y_pago_tardio_requiere_reembolso` | expiracion libera stock y pago tardio requiere reembolso | OK | 6.96 s |
+| `test_02_flujos_y_reglas::test_panel_de_administracion_y_productos` | panel de administracion y productos | OK | 0.32 s |
 | `test_02_flujos_y_reglas::test_eliminar_cuenta_borra_perfil_y_anonimiza_pedidos` | eliminar cuenta borra perfil y anonimiza pedidos | OK | 0.44 s |
 | `test_02_flujos_y_reglas::test_los_logs_no_contienen_credenciales_ni_datos_personales` | los logs no contienen credenciales ni datos personales | OK | 0.00 s |
 | `test_02_flujos_y_reglas::test_filtros_del_catalogo_texto_y_disponibilidad` | RF2 · entrada: GET /products con q, categoria y available · identidad: anónimo · esperado: solo coincidencias; agotados se excluyen con available=true. | OK | 0.04 s |
 | `test_02_flujos_y_reglas::test_stock_fisico_no_baja_de_lo_reservado` | RN10 · entrada: ajuste de stock menor que lo reservado · identidad: personal · esperado: 409 stock_below_reserved; igual a lo reservado, 200. | OK | 0.06 s |
-| `test_03_graphql::test_agregacion_pedidos_con_productos_vigentes` | agregacion pedidos con productos vigentes | OK | 0.06 s |
-| `test_03_graphql::test_cliente_ve_solo_lo_suyo_y_no_el_campo_cliente` | cliente ve solo lo suyo y no el campo cliente | OK | 0.07 s |
+| `test_03_graphql::test_agregacion_pedidos_con_productos_vigentes` | agregacion pedidos con productos vigentes | OK | 0.05 s |
+| `test_03_graphql::test_cliente_ve_solo_lo_suyo_y_no_el_campo_cliente` | cliente ve solo lo suyo y no el campo cliente | OK | 0.06 s |
 | `test_03_graphql::test_personal_ve_clientes_y_auditoria_no` | personal ve clientes y auditoria no | OK | 0.08 s |
-| `test_03_graphql::test_panel_operacion_agrega_orders_e_inventory` | panel operacion agrega orders e inventory | OK | 0.05 s |
-| `test_03_graphql::test_limites_de_consulta` | limites de consulta | OK | 0.06 s |
-| `test_04_cliente_vault::test_lee_secreto_con_token_del_servicio_y_cachea` | lee secreto con token del servicio y cachea | OK | 0.52 s |
-| `test_04_cliente_vault::test_politica_de_minimo_privilegio` | politica de minimo privilegio | OK | 0.52 s |
-| `test_04_cliente_vault::test_gestor_caido_usa_ultimo_valor_conocido_y_luego_falla_cerrado` | gestor caido usa ultimo valor conocido y luego falla cerrado | OK | 1.24 s |
+| `test_03_graphql::test_panel_operacion_agrega_orders_e_inventory` | panel operacion agrega orders e inventory | OK | 0.04 s |
+| `test_03_graphql::test_limites_de_consulta` | limites de consulta | OK | 0.05 s |
+| `test_04_cliente_vault::test_lee_secreto_con_token_del_servicio_y_cachea` | lee secreto con token del servicio y cachea | OK | 0.51 s |
+| `test_04_cliente_vault::test_politica_de_minimo_privilegio` | politica de minimo privilegio | OK | 0.51 s |
+| `test_04_cliente_vault::test_gestor_caido_usa_ultimo_valor_conocido_y_luego_falla_cerrado` | gestor caido usa ultimo valor conocido y luego falla cerrado | OK | 1.74 s |
 | `test_04_cliente_vault::test_politicas_generadas_por_servicio` | politicas generadas por servicio | OK | 0.00 s |
-| `test_99_resiliencia::test_inventory_caido_degrada_de_forma_controlada` | inventory caido degrada de forma controlada | OK | 0.88 s |
-| `test_99_resiliencia::test_orders_caido_da_503_y_se_recupera` | orders caido da 503 y se recupera | OK | 0.90 s |
-| `test_99_resiliencia::test_auth_caido_falla_cerrado` | auth caido falla cerrado | OK | 1.52 s |
-| `test_99_resiliencia::test_limite_de_profundidad_graphql` | El esquema actual llega a profundidad 5; se reinicia graphql con límite 3 para probar el rechazo. | OK | 2.09 s |
+| `test_05_mensajeria_stomp::test_pedido_pagado_publica_evento_sin_datos_personales` | Mensajería · entrada: pago aprobado · identidad: Orders con credencial del broker · esperado: un evento JSON en /queue/pedidos con id, total y líneas, sin datos del cliente · componente: orders + broker STOMP. | OK | 2.69 s |
+| `test_05_mensajeria_stomp::test_credencial_incorrecta_es_rechazada_por_el_broker` | Mensajería · entrada: conexión con clave errónea · identidad: desconocida · esperado: el broker rechaza la conexión · componente: broker STOMP. | OK | 0.00 s |
+| `test_05_mensajeria_stomp::test_broker_caido_no_afecta_el_pago` | Mensajería · entrada: pago aprobado con el broker apagado · identidad: cliente · esperado: el pedido queda pagado igual; solo se pierde el aviso · componente: orders. | OK | 3.81 s |
+| `test_99_resiliencia::test_inventory_caido_degrada_de_forma_controlada` | inventory caido degrada de forma controlada | OK | 0.83 s |
+| `test_99_resiliencia::test_orders_caido_da_503_y_se_recupera` | orders caido da 503 y se recupera | OK | 0.88 s |
+| `test_99_resiliencia::test_auth_caido_falla_cerrado` | auth caido falla cerrado | OK | 1.44 s |
+| `test_99_resiliencia::test_limite_de_profundidad_graphql` | El esquema actual llega a profundidad 5; se reinicia graphql con límite 3 para probar el rechazo. | OK | 2.18 s |
 
 Pruebas de navegador (Playwright contra el front-end real): ver `docs/evidencia/resultados-navegador.json` y las capturas en `docs/evidencia/capturas/`.
 
@@ -1343,7 +1410,7 @@ query {
       "total": 1,
       "items": [
         {
-          "id": "LR-F1E40D4B",
+          "id": "LR-24CD3CD3",
           "estado": "awaiting_payment",
           "total": 9370,
           "lineas": [
@@ -1412,7 +1479,7 @@ query {
       "total": 1,
       "items": [
         {
-          "id": "LR-F1E40D4B",
+          "id": "LR-24CD3CD3",
           "estado": "awaiting_payment",
           "total": 9370,
           "lineas": [
@@ -1448,7 +1515,7 @@ query {
 ## 3. Otro cliente (Beto) pide el pedido de Ana por id
 
 ```graphql
-query { resumenPedido(id: "LR-F1E40D4B") { id total } }
+query { resumenPedido(id: "LR-24CD3CD3") { id total } }
 ```
 ```json
 {
@@ -1670,7 +1737,7 @@ Pantallas: **P01** `productos.php` · **P02** modal de acceso (todas las página
 | RF3 | Crear un pedido con precios y total calculados por el servidor | P01 Productos → P03 Pago | orders+inventory · S12 | `test_V6_confirmar_pago_con_datos_alterados`<br>`test_flujo_completo_pedido_pago_y_preparacion`<br>`test_idempotency_key_no_duplica_pedidos`<br>`test_stock_insuficiente_y_validaciones_del_pedido`<br>navegador: P01 total del pedido en pantalla | 4/4 pytest; 1/1 navegador | capturas/03-pago-sandbox-1280.png |
 | RF4 | Reservar stock sin sobreventa; liberar al cancelar o vencer | P01 / P04 | inventory+orders · S12 S15 S26 | `test_cancelar_libera_el_stock`<br>`test_concurrencia_no_se_vende_mas_de_lo_que_hay`<br>`test_expiracion_libera_stock_y_pago_tardio_requiere_reembolso`<br>`test_stock_fisico_no_baja_de_lo_reservado` | 4/4 pytest | resultados-pruebas.md |
 | RF5 | Pagar y confirmar por resultado firmado del proveedor (el navegador no decide «pagado») | P03 Pago | payments+orders · S14 S17 S18 S19 | `test_V6_confirmar_pago_con_datos_alterados`<br>`test_flujo_completo_pedido_pago_y_preparacion`<br>`test_pago_rechazado_conserva_pedido_y_permite_reintento`<br>navegador: P03 pantalla de pago muestra total calculado por el servidor<br>navegador: P03 pago aprobado se confirma por webhook y el pedido queda 'Pagado' | 3/3 pytest; 2/2 navegador | capturas/03-pago-sandbox-1280.png, 04-pago-confirmado.png |
-| RF6 | Crear cuenta, iniciar y cerrar sesión de forma segura | P02 Acceso | auth · S03 S04 S05 S06 | `test_V2_operacion_protegida_sin_sesion`<br>`test_V2b_cookie_invalida_es_401`<br>`test_auth_caido_falla_cerrado`<br>`test_csrf_origen_y_tipo_de_contenido`<br>`test_login_generico_y_bloqueo_por_intentos`<br>`test_registro_login_logout_y_cookie_segura`<br>navegador: P02 sin sesión se abre el modal de acceso<br>navegador: P02 registro crea sesión (menú de cuenta visible)<br>navegador: Cookie de sesión HttpOnly y no legible por JS | 6/6 pytest; 3/3 navegador | capturas/02-modal-acceso.png |
+| RF6 | Crear cuenta, iniciar y cerrar sesión de forma segura | P02 Acceso | auth · S03 S04 S05 S06 | `test_V2_operacion_protegida_sin_sesion`<br>`test_V2b_cookie_invalida_es_401`<br>`test_auth_caido_falla_cerrado`<br>`test_csrf_origen_y_tipo_de_contenido`<br>`test_login_generico_y_bloqueo_por_intentos`<br>`test_registro_login_logout_y_cookie_segura`<br>`test_token_bearer_para_clientes_que_no_son_navegador`<br>navegador: P02 sin sesión se abre el modal de acceso<br>navegador: P02 registro crea sesión (menú de cuenta visible)<br>navegador: Cookie de sesión HttpOnly y no legible por JS | 7/7 pytest; 3/3 navegador | capturas/02-modal-acceso.png |
 | RF7 | Consultar y cancelar mis pedidos (solo los míos) | P04 Mis pedidos | orders+graphql · S13 S15 S20 | `test_V4_pedido_ajeno_no_devuelve_datos`<br>`test_agregacion_pedidos_con_productos_vigentes`<br>`test_cancelar_libera_el_stock`<br>`test_cliente_ve_solo_lo_suyo_y_no_el_campo_cliente`<br>navegador: P04 Mis pedidos (GraphQL) lista el pedido pagado con productos | 4/4 pytest; 1/1 navegador | capturas/05-mis-pedidos-1280.png |
 | RF8 | Ver, editar y eliminar mi perfil | P04 Mi perfil | clients+auth+orders · S07 S08 S09 | `test_eliminar_cuenta_borra_perfil_y_anonimiza_pedidos` | 1/1 pytest | resultados-pruebas.md |
 | RF9 | Personal: ver pedidos y avanzar su estado | P05 Panel · Pedidos | orders · S16 S20 | `test_V3_administracion_con_rol_sin_permiso`<br>`test_flujo_completo_pedido_pago_y_preparacion`<br>`test_personal_ve_clientes_y_auditoria_no`<br>navegador: P05 personal ve pedidos con nombre del cliente<br>navegador: P05 personal avanza el pedido a 'En preparación'<br>navegador: P05 inventario muestra stock y reservas<br>navegador: P05 auditoría no ve nombres de clientes ni botones de acción<br>navegador: P05 auditoría no ve pestañas de inventario/mensajes | 3/3 pytest; 5/5 navegador | capturas/06-admin-pedidos-personal-1280.png |
@@ -1682,6 +1749,7 @@ Pantallas: **P01** `productos.php` · **P02** modal de acceso (todas las página
 | RNF2 | Secretos en gestor, rotables, con degradación segura | — | lr_common.secrets | `test_gestor_caido_usa_ultimo_valor_conocido_y_luego_falla_cerrado`<br>`test_lee_secreto_con_token_del_servicio_y_cachea` | 2/2 pytest | resultados-pruebas.md |
 | RNF3 | Registros sin credenciales ni datos personales | — | lr_common.logs | `test_los_logs_no_contienen_credenciales_ni_datos_personales` | 1/1 pytest | resultados-pruebas.md |
 | RNF4 | Degradación controlada ante caídas (502/503/504, recuperación) | — | gateway+clientes HTTP | `test_inventory_caido_degrada_de_forma_controlada`<br>`test_orders_caido_da_503_y_se_recupera` | 2/2 pytest | resultados-pruebas.md |
+| RNF6 | Aviso interno de pedido pagado por mensajería (STOMP), sin datos personales y sin afectar el pago si el broker falla | — | orders → /queue/pedidos | `test_broker_caido_no_afecta_el_pago`<br>`test_credencial_incorrecta_es_rechazada_por_el_broker`<br>`test_pedido_pagado_publica_evento_sin_datos_personales` | 3/3 pytest | resultados-pruebas.md |
 | RNF5 | Desempeño: p95 dentro de objetivos con la carga proyectada | — | todos | — | objetivos de carga: cumplidos | carga.md |
 
 ## Cómo ejecutar
@@ -1693,7 +1761,7 @@ Ver `README.md` (raíz de `evaluacion2`): arranque con `docker compose`, arranqu
 Esto **no se ejecutó** en el entorno de desarrollo; es lo que debe verificarse antes de presentar:
 
 1. `python scripts/init_env.py` crea `deploy/.env`; `docker compose -f deploy/docker-compose.yml up --build` termina con `bootstrap` en estado *Exited (0)* y el resto *healthy*.
-2. `curl http://localhost:8000/health` → 200; `curl http://localhost:8001/health` desde el anfitrión → **debe fallar** (sin puerto publicado).
+2. `curl http://localhost:8000/health` → 200; `curl http://localhost:8100/health` desde el anfitrión → **debe fallar** (sin puerto publicado).
 3. Abrir `http://localhost:8080`, crear cuenta, comprar, pagar con el sandbox y ver «Pagado».
 4. **Persistencia real:** `docker compose down` (sin `-v`) y `up` de nuevo: el pedido y el usuario siguen.
 5. **Falla de Vault:** `docker compose stop vault` → el sistema sigue un tiempo con el último valor y luego responde 503; `start vault` → se recupera (en modo dev Vault pierde los secretos al reiniciarse: volver a ejecutar `bootstrap`).
@@ -1703,10 +1771,24 @@ Esto **no se ejecutó** en el entorno de desarrollo; es lo que debe verificarse 
 
 * **Arranque/parada:** `docker compose -f deploy/docker-compose.yml up -d --build` / `down`.
 * **Configuración de secretos:** nada se escribe a mano: `init_env.py` genera la clave raíz de Vault, la de MongoDB y la contraseña de los usuarios de prueba en `deploy/.env` (no versionado); `vault_bootstrap.py` genera y reparte el resto.
-* **Datos iniciales:** catálogo de 12 productos (`backend/inventory/catalogo.json`) y 5 usuarios ficticios (2 clientes, personal, admin, auditoría) con la contraseña de `LR_SEED_PASSWORD`.
+* **Datos iniciales:** catálogo de 12 productos (`apigateway/inventory/catalogo.json`) y 5 usuarios ficticios (2 clientes, personal, admin, auditoría) con la contraseña de `LR_SEED_PASSWORD`.
 * **Salud:** cada servicio expone `/health` (vivo) y `/ready` (base y dependencias).
 * **Rotación de un secreto:** borrar su ruta en Vault y volver a ejecutar `bootstrap`; reiniciar los servicios implicados.
 * **Registros:** JSON por salida estándar con `correlation_id` para seguir una solicitud entre servicios.
+
+## Ejecución local por procesos (misma forma de trabajo que en clases)
+
+| Pieza | Comando equivalente | Puerto |
+|---|---|---:|
+| Vault | `vault server -dev -dev-root-token-id=<token>` | 8200 |
+| MongoDB | `mongod` | 27017 |
+| Broker STOMP (opcional) | RabbitMQ con `rabbitmq_stomp` | 61613 |
+| Gateway | `uvicorn gateway:app --app-dir apigateway/gateway --port 8000` | 8000 |
+| Auth Service | `uvicorn auth_service:app --app-dir apigateway/auth-service --port 8100` | 8100 |
+| Inventory / Orders / Clients / Payments | `uvicorn backend_api:app --app-dir apigateway/<servicio> --port 9000 / 9100 / 9200 / 9300` | 9000–9300 |
+| GraphQL Gateway | `uvicorn server:app --app-dir graphql --port 8090` | 8090 |
+
+`python scripts/dev_local.py --real` hace todo lo anterior de una vez (salvo Vault, MongoDB y el broker, que deben estar corriendo): ejecuta el bootstrap de secretos y levanta cada proceso con su propio token de Vault. **Este modo `--real` no se ejecutó en el entorno de desarrollo** (no había binarios de Vault ni MongoDB); `python scripts/dev_local.py` sin opciones (base en memoria y secretos por entorno) es el que usan las pruebas.
 
 ## Guion de demostración de los flujos principales (≈5 minutos)
 
@@ -1723,9 +1805,9 @@ Evidencia equivalente ya capturada: `docs/evidencia/capturas/` y `resultados-nav
 
 ## Flujos complementarios y alcance
 
-* **Despacho, boletas y mensajería:** no aplican al caso (retiro en tienda) y no se implementan; ver Módulo 3.
+* **Mensajería:** aviso interno «pedido pagado» por STOMP (Módulo 3). **Despacho y boletas:** no aplican al caso (retiro en tienda).
 * **Restricciones tecnológicas del curso:** se mantienen PHP + Bootstrap + JavaScript en el front-end; el backend usa Python/FastAPI, MongoDB y Vault.
-* **Persistencia, esquema y datos de prueba:** MongoDB real en el despliegue (volumen `mongo-data`); los servicios crean sus **índices al arrancar** (colecciones sin esquema fijo; la validación está en el servicio); los datos de prueba se crean con `LR_SEED=1` (productos de `catalogo.json` y 5 usuarios ficticios). Dependencias con **versiones fijadas** en `backend/requirements.txt`; variables en `deploy/.env.example` sin valores reales.
+* **Persistencia, esquema y datos de prueba:** MongoDB real en el despliegue (volumen `mongo-data`); los servicios crean sus **índices al arrancar** (colecciones sin esquema fijo; la validación está en el servicio); los datos de prueba se crean con `LR_SEED=1` (productos de `catalogo.json` y 5 usuarios ficticios). Dependencias con **versiones fijadas** en `apigateway/requirements.txt`; variables en `deploy/.env.example` sin valores reales.
 * **Pruebas gRPC/analíticas:** no aplican (ver ADR del Módulo 9).
 
 ## Límites declarados de esta entrega

@@ -4,7 +4,7 @@ classDiagram
         +dispatch(request)
     }
     class RouteDefinition {
-        +id : S01..S26
+        +id : S01..S27
         +method
         +path
         +upstream
@@ -67,7 +67,7 @@ classDiagram
         +exige clave de arista
         +re-verifica rol y propiedad
     }
-    ApiGateway "1" o-- "1..*" RouteDefinition : tabla de rutas (26)
+    ApiGateway "1" o-- "1..*" RouteDefinition : tabla de rutas (27)
     RouteDefinition "0..*" --> "1" AuthorizationPolicy : política de rol
     RouteDefinition "0..*" --> "1" RateLimitPolicy : clase de límite
     RouteDefinition "0..*" --> "1" ServiceTarget : destino

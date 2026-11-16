@@ -2,23 +2,29 @@
 
 ## Servicios y responsabilidades
 
-| Servicio | Puerto | Responsabilidad | Base propia | Expuesto al navegador |
-|---|---:|---|---|---|
-| API Gateway | 8000 | Único punto de entrada: sesión, rol, origen, tamaño, límite, enrutamiento y traducción de errores | no | **sí** (también el webhook del proveedor) |
-| Auth | 8001 | Cuentas, contraseñas (Argon2id), sesiones, bloqueo por intentos | `auth` | no |
-| Clients | 8002 | Perfil del cliente y mensajes de contacto | `clients` | no |
-| Inventory | 8003 | Catálogo, stock y reservas atómicas | `inventory` | no |
-| Orders | 8004 | Pedidos, precios del servidor, estados, expiración, idempotencia | `orders` | no |
-| Payments | 8005 | Intención de pago, sandbox, webhook firmado | `payments` | no |
-| GraphQL | 8006 | Agregación de lectura sin base propia | no | no (solo vía gateway) |
+| Servicio | Carpeta | Puerto | Responsabilidad | Base propia | Expuesto al navegador |
+|---|---|---:|---|---|---|
+| API Gateway | `apigateway/gateway/gateway.py` | 8000 | Único punto de entrada: sesión, rol, origen, tamaño, límite, enrutamiento y traducción de errores | no | **sí** (también el webhook del proveedor) |
+| Auth Service | `apigateway/auth-service/auth_service.py` | 8100 | Cuentas, contraseñas (Argon2id), sesiones, bloqueo por intentos | `auth` | no |
+| Inventory | `apigateway/inventory/backend_api.py` | 9000 | Catálogo, stock y reservas atómicas | `inventory` | no |
+| Orders | `apigateway/orders/backend_api.py` | 9100 | Pedidos, precios del servidor, estados, expiración, idempotencia; publica eventos STOMP | `orders` | no |
+| Clients | `apigateway/clients/backend_api.py` | 9200 | Perfil del cliente y mensajes de contacto | `clients` | no |
+| Payments | `apigateway/payments/backend_api.py` | 9300 | Intención de pago, sandbox, webhook firmado | `payments` | no |
+| GraphQL Gateway | `graphql/server.py` | 8090 | Agregación de lectura sin base propia | no | no (solo vía gateway) |
+| Mensajería | `stomp/productor.py`, `stomp/consumidor.py` | 61613 (broker) | Aviso «pedido pagado» en la cola `/queue/pedidos` | no | no |
+| Vault / MongoDB | infraestructura | 8200 / 27017 | Secretos / persistencia | — | no |
 
-## Matriz de servicios (26 operaciones externas)
+La distribución de carpetas y puertos sigue la del material del curso (`apigateway/gateway`, `apigateway/auth-service`, backends en 9000+, GraphQL en 8090, Vault en 8200, STOMP en 61613). Los puertos están definidos una sola vez en `apigateway/common/lr_common/ports.py`.
 
-Generada desde `backend/gateway/routes.py`, que es la tabla que el gateway ejecuta: lo documentado es lo implementado.
+## Matriz de servicios (27 operaciones externas)
+
+Generada desde `apigateway/gateway/routes.py`, que es la tabla que el gateway ejecuta: lo documentado es lo implementado.
 
 {{incluir:generado/m1-matriz-servicios.md}}
 
 ## Formato común de contratos
+
+* **Autenticación:** el sitio usa una cookie de sesión `HttpOnly` (S04). Para clientes que no son navegador (curl, Postman) existe S27 `POST /auth/token`, que entrega el mismo token como `Bearer` y **no** crea cookie; el gateway acepta `Authorization: Bearer <token>` con exactamente los mismos controles de sesión y rol.
 
 * JSON (UTF-8); fechas ISO-8601 en UTC con `Z`; dinero en **pesos chilenos enteros** (sin decimales).
 * Todo error tiene la misma forma: `{"error": {"code": "...", "message": "...", "correlation_id": "...", "details": [...]}}`. Los mensajes no revelan detalles internos ni distinguen «correo inexistente» de «clave errónea».
@@ -49,7 +55,7 @@ Errores: `400 duplicate_items | validation_error` · `401` · `403` (rol no clie
 
 **S20 · `POST /api/v1/graphql`** — ver Módulo 8, con ejemplos reales de consulta y respuesta.
 
-## Ejemplo JSON de cada contrato (S01–S26)
+## Ejemplo JSON de cada contrato (S01–S27)
 
 Cada operación se ejecutó contra el sistema con **datos ficticios**; abajo están las solicitudes y respuestas reales (cookies y firmas redactadas). Incluyen casos de error representativos (filtro inválido, credenciales inválidas, pedido ajeno, firma falsa). Se regeneran con `python scripts/ejemplos_contratos.py`.
 

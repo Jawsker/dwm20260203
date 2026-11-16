@@ -1,18 +1,20 @@
 flowchart LR
     B([Navegador]) -->|HTTP :8080| F[Frontend PHP + JS]
-    B ==>|HTTPS :8000 cookie HttpOnly| GW
+    B ==>|HTTPS :8000 cookie HttpOnly o Bearer| GW
     subgraph PUB[Red pública]
         F
-        GW[API Gateway]
+        GW[API Gateway :8000]
     end
     subgraph PRIV[Red privada interna - sin salida a Internet]
-        AUTH[Auth Service]
-        CLI[Clients]
-        INV[Inventory]
-        ORD[Orders]
-        PAY[Payments]
-        GQL[GraphQL Gateway]
-        V[(Vault)]
+        AUTH[Auth Service :8100]
+        CLI[Clients :9200]
+        INV[Inventory :9000]
+        ORD[Orders :9100]
+        PAY[Payments :9300]
+        GQL[GraphQL Gateway :8090]
+        V[(Vault :8200)]
+        MQ[[Broker STOMP :61613<br/>cola /queue/pedidos]]
+        CON[Consumidor de tienda]
         M1[(auth DB)]
         M2[(clients DB)]
         M3[(inventory DB)]
@@ -32,6 +34,8 @@ flowchart LR
     ORD -->|edge orders→payments| PAY
     PAY -->|edge payments→orders| ORD
     PAY -. "webhook firmado (simula al proveedor)" .-> GW
+    ORD -. "evento pedido_pagado (sin datos personales)" .-> MQ
+    MQ -.-> CON
     AUTH --- M1
     CLI --- M2
     INV --- M3

@@ -55,6 +55,20 @@ services:
       retries: 20
     networks: [private]          # sin puertos publicados
 
+  # Broker de mensajería (RabbitMQ con el plugin STOMP, puerto 61613). Solo red privada.
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    command: ["sh", "-c", "rabbitmq-plugins enable --offline rabbitmq_stomp && exec rabbitmq-server"]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${STOMP_USER:?}
+      RABBITMQ_DEFAULT_PASS: ${STOMP_PASSWORD:?}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [private]          # sin puertos publicados
+
   bootstrap:
     build: {context: ../scripts, dockerfile: Dockerfile.bootstrap}
     environment:
@@ -62,6 +76,8 @@ services:
       VAULT_ROOT_TOKEN: ${VAULT_ROOT_TOKEN:?}
       MONGO_ROOT_USER: ${MONGO_ROOT_USER:?}
       MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?}
+      STOMP_USER: ${STOMP_USER:?}
+      STOMP_PASSWORD: ${STOMP_PASSWORD:?}
     volumes:
       - tok-auth:/run/tokens/auth
       - tok-clients:/run/tokens/clients
@@ -78,7 +94,7 @@ services:
 
   auth:
     <<: *backend
-    build: {context: ../backend, args: {SVC_DIR: auth}}
+    build: {context: .., dockerfile: apigateway/Dockerfile, args: {SVC_DIR: apigateway/auth-service, SVC_MODULE: auth_service, SVC_PORT: "8100"}}
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN_FILE: /run/token/token
@@ -89,7 +105,7 @@ services:
     networks: [private]
   clients:
     <<: *backend
-    build: {context: ../backend, args: {SVC_DIR: clients}}
+    build: {context: .., dockerfile: apigateway/Dockerfile, args: {SVC_DIR: apigateway/clients, SVC_MODULE: backend_api, SVC_PORT: "9200"}}
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN_FILE: /run/token/token
@@ -99,7 +115,7 @@ services:
     networks: [private]
   inventory:
     <<: *backend
-    build: {context: ../backend, args: {SVC_DIR: inventory}}
+    build: {context: .., dockerfile: apigateway/Dockerfile, args: {SVC_DIR: apigateway/inventory, SVC_MODULE: backend_api, SVC_PORT: "9000"}}
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN_FILE: /run/token/token
@@ -109,41 +125,42 @@ services:
     networks: [private]
   orders:
     <<: *backend
-    build: {context: ../backend, args: {SVC_DIR: orders}}
+    build: {context: .., dockerfile: apigateway/Dockerfile, args: {SVC_DIR: apigateway/orders, SVC_MODULE: backend_api, SVC_PORT: "9100"}}
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN_FILE: /run/token/token
       LR_SECRETS_MODE: vault
-      LR_INVENTORY_URL: http://inventory:8000
-      LR_PAYMENTS_URL: http://payments:8000
+      LR_INVENTORY_URL: http://inventory:9000
+      LR_PAYMENTS_URL: http://payments:9300
+      LR_STOMP_HOST: rabbitmq          # eventos de pedido pagado → /queue/pedidos (si el broker cae, el pedido no se afecta)
     volumes: [tok-orders:/run/token:ro]
     networks: [private]
   payments:
     <<: *backend
-    build: {context: ../backend, args: {SVC_DIR: payments}}
+    build: {context: .., dockerfile: apigateway/Dockerfile, args: {SVC_DIR: apigateway/payments, SVC_MODULE: backend_api, SVC_PORT: "9300"}}
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN_FILE: /run/token/token
       LR_SECRETS_MODE: vault
-      LR_ORDERS_URL: http://orders:8000
+      LR_ORDERS_URL: http://orders:9100
       LR_WEBHOOK_URL: http://gateway:8000/api/v1/webhooks/payments
     volumes: [tok-payments:/run/token:ro]
     networks: [private]
   graphql:
     <<: *backend
-    build: {context: ../backend, args: {SVC_DIR: graphql_gateway}}
+    build: {context: .., dockerfile: apigateway/Dockerfile, args: {SVC_DIR: graphql, SVC_MODULE: server, SVC_PORT: "8090"}}
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN_FILE: /run/token/token
       LR_SECRETS_MODE: vault
-      LR_ORDERS_URL: http://orders:8000
-      LR_INVENTORY_URL: http://inventory:8000
-      LR_CLIENTS_URL: http://clients:8000
+      LR_ORDERS_URL: http://orders:9100
+      LR_INVENTORY_URL: http://inventory:9000
+      LR_CLIENTS_URL: http://clients:9200
     volumes: [tok-graphql:/run/token:ro]
     networks: [private]
   gateway:
     <<: *backend
-    build: {context: ../backend, args: {SVC_DIR: gateway}}
+    build: {context: .., dockerfile: apigateway/Dockerfile, args: {SVC_DIR: apigateway/gateway, SVC_MODULE: gateway, SVC_PORT: "8000"}}
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN_FILE: /run/token/token

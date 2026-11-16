@@ -2,7 +2,7 @@
 
 **Caso:** Libre & Rico (panadería/pastelería sin gluten, venta web con retiro en tienda) · **Unidad 2** · Desarrollo Web y Móvil
 
-**Equipo (integrante único):** Matías Palma Santana · **Fecha:** 09-11-2026
+**Equipo (integrante único):** Matías Palma Santana · **Fecha:** 09-11-2026 · **Actualización:** 16-11-2026 (estructura y puertos como el material del curso, mensajería STOMP, token Bearer, paleta única en el front-end)
 
 **Versión del front-end integrada:** sitio PHP + Bootstrap + JavaScript del repositorio `dwm20260203` (commit base `f481908`), extendido en esta entrega con `assets/js/{api,cuenta,productos,pago,pedidos,admin}.js` y las pantallas `productos.php`, `pago.php`, `mis-pedidos.php`, `admin.php`, `contacto.php`. El archivo `api-dummy.js` (datos simulados) fue **eliminado**: todas las pantallas consumen el backend real.
 
@@ -10,10 +10,12 @@
 
 | Pieza | Dónde |
 |---|---|
-| Código de 7 servicios (gateway, auth, clients, inventory, orders, payments, graphql) | `backend/` |
+| API Gateway, Auth Service y los 4 backends privados (inventory, orders, clients, payments) | `apigateway/` |
+| GraphQL Gateway privado | `graphql/` |
+| Mensajería STOMP (productor en Orders, consumidor de tienda) | `stomp/`, `apigateway/common/lr_common/mensajeria.py` |
 | Front-end integrado | `frontend/` |
 | Despliegue reproducible (docker compose + Vault + MongoDB) | `deploy/`, `scripts/vault_bootstrap.py` |
-| Ejecución local sin Docker (para pruebas) | `scripts/dev_local.py` |
+| Ejecución local por procesos, cada pieza en su puerto (en memoria, o `--real` con Vault y MongoDB locales) | `scripts/dev_local.py` |
 | Pruebas automatizadas, de navegador y de carga | `tests/`, `scripts/carga.py` |
 | Informe por módulo (este documento) y evidencias | `docs/`, `docs/evidencia/` |
 

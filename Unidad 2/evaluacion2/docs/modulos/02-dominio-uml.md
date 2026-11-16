@@ -39,9 +39,9 @@ Fuente editable: `docs/diagramas/dominio.mmd`. Cada entidad está marcada con el
 
 Fuente editable: `docs/diagramas/servicios_publicos.mmd`.
 
-**Leyenda de notación.** `«service»` = servicio con las operaciones de la matriz del Módulo 1 (cada operación lleva su ID S01–S26). Línea con rombo lleno = composición; línea simple = asociación con multiplicidades; **flecha punteada = dependencia de uso** (el servicio usa la clase o a otro servicio; *no* significa relación entre registros de negocio). Los sufijos `DTO` son los objetos que cruzan la frontera hacia el navegador.
+**Leyenda de notación.** `«service»` = servicio con las operaciones de la matriz del Módulo 1 (cada operación lleva su ID S01–S27). Línea con rombo lleno = composición; línea simple = asociación con multiplicidades; **flecha punteada = dependencia de uso** (el servicio usa la clase o a otro servicio; *no* significa relación entre registros de negocio). Los sufijos `DTO` son los objetos que cruzan la frontera hacia el navegador.
 
-**Correspondencia operación UML → ID de servicio:** `InventoryService`: S01 S02 S21 S22 S23 S24 · `AuthService`: S03 S04 S05 S06 S25 · `ClientService`: S07 S08 S09 S10 S11 · `OrderService`: S12 S13 S14 S15 S16 S26 · `PaymentService`: S17 S18 S19 · `GraphQLGateway`: S20. (S09 «eliminar cuenta» la orquesta el gateway: Auth + Clients + anonimización en Orders.)
+**Correspondencia operación UML → ID de servicio:** `InventoryService`: S01 S02 S21 S22 S23 S24 · `AuthService`: S03 S04 S05 S06 S25 S27 · `ClientService`: S07 S08 S09 S10 S11 · `OrderService`: S12 S13 S14 S15 S16 S26 · `PaymentService`: S17 S18 S19 · `GraphQLGateway`: S20. (S09 «eliminar cuenta» la orquesta el gateway: Auth + Clients + anonimización en Orders.)
 
 ### Tabla de relaciones (origen → destino)
 

@@ -17,6 +17,7 @@ Una tienda online de panadería donde **el navegador nunca decide nada important
 | **Orders** | El libro de pedidos | Crea pedidos, calcula el total, lleva su estado |
 | **Payments** | La caja | Se conecta con el proveedor de pagos y recibe el resultado |
 | **GraphQL** | El ayudante que junta papeles | Une datos de pedidos, bodega y clientes en una sola respuesta |
+| **STOMP** (cola de mensajes) | El timbre de la cocina | Orders avisa «pedido pagado»; si el timbre falla, el pedido igual queda registrado |
 | **Vault** | La caja fuerte de llaves | Guarda las claves; cada servicio tiene permiso solo para las suyas |
 | **MongoDB** | Los archivadores | Cada servicio tiene el suyo y no abre el de otro |
 
@@ -60,7 +61,7 @@ Una tienda online de panadería donde **el navegador nunca decide nada important
 | ¿Por qué no gRPC ni servicio de analítica? | La carga proyectada es baja (~200 pedidos/día) y las mediciones cumplen con holgura; añadir eso sería complejidad sin necesidad (ver ADR, Módulo 9) |
 | ¿Qué es una cookie HttpOnly? | Una cookie que el navegador envía pero que el JavaScript no puede leer |
 | ¿Qué es CSRF y cómo se evita? | Que otra página haga acciones con tu sesión. Se evita con cookie `SameSite=Lax` y verificando el `Origin` de cada petición que modifica datos |
-| ¿Qué probaste? | 37 pruebas automáticas (incluye 6 validaciones del Módulo 7), 20 pruebas con navegador y una prueba de carga |
+| ¿Qué probaste? | 41 pruebas automáticas (incluye 6 validaciones del Módulo 7), 20 pruebas con navegador y una prueba de carga |
 | ¿Qué NO probaste? | Docker/Vault/MongoDB reales (las pruebas usaron base en memoria y un Vault simulado) y un proveedor de pagos real |
 
 ## 5. Mini glosario
@@ -80,7 +81,7 @@ Una tienda online de panadería donde **el navegador nunca decide nada important
 
 ```bash
 cd "Unidad 2/evaluacion2"
-pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+pip install -r apigateway/requirements.txt -r apigateway/requirements-dev.txt
 python scripts/dev_local.py          # deja corriendo; imprime la contraseña de prueba
 php -S localhost:8080 -t frontend    # en otra terminal
 ```
@@ -88,8 +89,8 @@ Abre `http://localhost:8080` y recorre: 1) crear cuenta, 2) comprar, 3) pagar �
 
 ## 7. Ejercicio de comprensión (cambia algo tú mismo)
 
-1. Cambia el vencimiento del pedido de 15 a 1 minuto: en `backend/orders/main.py` línea `TTL = int(os.getenv("LR_ORDER_TTL_SECONDS", "900"))` pon `"60"` (reinicia `dev_local.py`), crea un pedido sin pagar y observa que expira y devuelve el stock.
-2. Baja el límite de intentos de login: en `backend/auth/main.py` cambia `"LR_LOGIN_MAX_FAILS", "5"` por `"3"` (reinicia) y compruébalo con 4 contraseñas erróneas.
+1. Cambia el vencimiento del pedido de 15 a 1 minuto: en `apigateway/orders/backend_api.py` línea `TTL = int(os.getenv("LR_ORDER_TTL_SECONDS", "900"))` pon `"60"` (reinicia `dev_local.py`), crea un pedido sin pagar y observa que expira y devuelve el stock.
+2. Baja el límite de intentos de login: en `apigateway/auth-service/auth_service.py` cambia `"LR_LOGIN_MAX_FAILS", "5"` por `"3"` (reinicia) y compruébalo con 4 contraseñas erróneas.
 3. Ejecuta `pytest tests -q` y mira qué prueba falla si rompes una regla (por ejemplo, quita la verificación de rol de una ruta en `routes.py`).
 
 Si puedes hacer esto y explicar por qué pasó lo que pasó, entiendes el proyecto.

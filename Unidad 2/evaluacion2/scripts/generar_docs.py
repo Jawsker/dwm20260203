@@ -14,8 +14,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "backend" / "gateway"))
-sys.path.insert(0, str(ROOT / "backend" / "common"))
+sys.path.insert(0, str(ROOT / "apigateway" / "gateway"))
+sys.path.insert(0, str(ROOT / "apigateway" / "common"))
 sys.path.insert(0, str(ROOT / "scripts"))
 from routes import PREFIX, ROUTES  # noqa: E402
 from topology import EDGES, EXTRA, WITH_DB  # noqa: E402
@@ -57,6 +57,8 @@ META = {
     "S24": ("RF10", "P05 · Guardar stock", "Ajustar stock físico", "body: stock 0-100000", "200 producto; 409 stock_below_reserved; 404; 403", "Dato interno", "Personal/administración"),
     "S25": ("RF13", "(API) · alta de personal", "Crear cuentas de personal, auditoría o administración", "body: email, password, role ∈ {staff,auditor,admin}", "201 {user_id,role}; 409 email_taken; 403", "Credencial", "Solo administración"),
     "S26": ("RF4", "(API) · mantenimiento", "Expirar pedidos vencidos y liberar stock", "—", "200 {expired,released_retried,commits_retried}; 403", "Dato interno", "Solo administración"),
+    "S27": ("RF6", "(API) · clientes que no son navegador", "Autenticar y obtener un token Bearer", "body: email, password",
+            "200 {access_token,token_type,expires_in,user} sin cookie; 401 invalid_credentials; 429", "Credencial", "—"),
 }
 ROLES = ["customer", "staff", "admin", "auditor"]
 NOMBRE_ROL = {"customer": "Cliente", "staff": "Personal", "admin": "Admin.", "auditor": "Auditoría"}
@@ -110,10 +112,17 @@ def m6():
     for s in WITH_DB:
         rows.append([f"`db/{s}`", "credencial de base de datos", "bootstrap (usuario Mongo `svc_" + s + "`)", s, f"conexión de `{s}` a su base `{s}`",
                      f"Vault KV `secret/lr/db/{s}`", f"readWrite solo sobre la base `{s}`", "rotar: repetir bootstrap (updateUser); revocar: eliminar usuario Mongo"])
-    for ref, who in EXTRA.items():
-        rows.append([f"`{ref}`", "secreto de firma de webhooks (HMAC-SHA256)", "bootstrap (con proveedor real: panel del proveedor)", ", ".join(who) + " (verifica y, en sandbox, firma)",
-                     "autenticar eventos del proveedor de pagos", f"Vault KV `secret/lr/{ref}`", "solo `payments`; el navegador nunca lo recibe",
-                     "rotar: nuevo secreto + ventana de doble verificación; revocar: eliminarlo (webhooks pasan a 401)"])
+    DETALLE = {
+        "payments/webhook": ("secreto de firma de webhooks (HMAC-SHA256)", "bootstrap (con proveedor real: panel del proveedor)", "payments (verifica y, en sandbox, firma)",
+                             "autenticar eventos del proveedor de pagos", "solo `payments`; el navegador nunca lo recibe",
+                             "rotar: nuevo secreto + ventana de doble verificación; revocar: eliminarlo (webhooks pasan a 401)"),
+        "stomp/broker": ("usuario y clave del broker STOMP", "`deploy/.env` → bootstrap (el broker arranca con la misma)", "orders (publica eventos de pedido pagado)",
+                         "publicar en `/queue/pedidos`", "solo `orders`; el consumidor de tienda usa su propia variable de entorno",
+                         "rotar: cambiar en `.env`, recrear broker y repetir bootstrap; revocar: eliminar el usuario del broker (los eventos dejan de publicarse, los pedidos siguen)"),
+    }
+    for ref in EXTRA:
+        tipo, emisor, consumidor, fin, alcance, rot = DETALLE[ref]
+        rows.append([f"`{ref}`", tipo, emisor, consumidor, fin, f"Vault KV `secret/lr/{ref}`", alcance, rot])
     rows.append(["`vault/token/<servicio>`", "token de Vault con política de solo lectura", "bootstrap (token raíz solo en el contenedor bootstrap)", "cada servicio, su propio token",
                  "leer únicamente sus referencias", "volumen de Docker montado solo en ese servicio (`/run/token/token`)", "política `lr-<servicio>`: capabilities=[read] sobre sus rutas",
                  "TTL 720 h; en producción AppRole/identidad de plataforma con renovación; revocar: `vault token revoke`"])
@@ -167,7 +176,7 @@ REQ = [
     ("RF5", "Pagar y confirmar por resultado firmado del proveedor (el navegador no decide «pagado»)", "P03 Pago", "payments+orders · S14 S17 S18 S19",
      ["test_flujo_completo", "test_pago_rechazado", "test_V6_"], ["P03 pantalla", "P03 pago aprobado"], "capturas/03-pago-sandbox-1280.png, 04-pago-confirmado.png"),
     ("RF6", "Crear cuenta, iniciar y cerrar sesión de forma segura", "P02 Acceso", "auth · S03 S04 S05 S06",
-     ["test_registro_login", "test_login_generico", "test_csrf", "test_V2_", "test_V2b_", "test_auth_caido"], ["P02", "Cookie de sesión"], "capturas/02-modal-acceso.png"),
+     ["test_registro_login", "test_login_generico", "test_csrf", "test_V2_", "test_V2b_", "test_auth_caido", "test_token_bearer"], ["P02", "Cookie de sesión"], "capturas/02-modal-acceso.png"),
     ("RF7", "Consultar y cancelar mis pedidos (solo los míos)", "P04 Mis pedidos", "orders+graphql · S13 S15 S20",
      ["test_V4_", "test_agregacion_pedidos", "test_cliente_ve_solo", "test_cancelar_libera"], ["P04 Mis pedidos"], "capturas/05-mis-pedidos-1280.png"),
     ("RF8", "Ver, editar y eliminar mi perfil", "P04 Mi perfil", "clients+auth+orders · S07 S08 S09",
@@ -190,6 +199,8 @@ REQ = [
      ["test_los_logs_no"], [], "resultados-pruebas.md"),
     ("RNF4", "Degradación controlada ante caídas (502/503/504, recuperación)", "—", "gateway+clientes HTTP",
      ["test_inventory_caido", "test_orders_caido"], [], "resultados-pruebas.md"),
+    ("RNF6", "Aviso interno de pedido pagado por mensajería (STOMP), sin datos personales y sin afectar el pago si el broker falla", "—", "orders → /queue/pedidos",
+     ["test_pedido_pagado_publica", "test_credencial_incorrecta", "test_broker_caido"], [], "resultados-pruebas.md"),
     ("RNF5", "Desempeño: p95 dentro de objetivos con la carga proyectada", "—", "todos", [], [], "carga.md"),
 ]
 

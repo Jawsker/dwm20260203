@@ -21,6 +21,7 @@
     --lr-space-5: 3rem;
     --lr-radius: .6rem;
     --lr-line: rgba(51,25,17,.14);
+    --lr-muted: rgba(51,25,17,.72); /* texto secundario: el mismo color de texto, atenuado */
 
     /* Sobrescritura de variables de Bootstrap */
     --bs-body-font-family: 'Work Sans', system-ui, sans-serif;
@@ -67,7 +68,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .lr-navbar.lr-scrolled{
     padding-top: .4rem;
     padding-bottom: .4rem;
-    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    box-shadow: 0 6px 18px rgba(51,25,17,.25);
 }
 .lr-brand{
     font-family: 'Fraunces', serif;
@@ -77,7 +78,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .lr-brand-amp{ color: var(--lr-gold); font-style: italic; }
 .lr-navbar .nav-link{
-    color: rgba(251,246,236,.82);
+    color: rgba(247,238,235,.82);
     font-weight: 500;
     padding: .5rem .9rem;
     border-radius: .4rem;
@@ -89,9 +90,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .lr-navbar .dropdown-menu{
     background: var(--lr-ink);
-    border: 1px solid rgba(251,246,236,.15);
+    border: 1px solid rgba(247,238,235,.15);
 }
-.lr-navbar .dropdown-item{ color: rgba(251,246,236,.85); }
+.lr-navbar .dropdown-item{ color: rgba(247,238,235,.85); }
 .lr-navbar .dropdown-item:hover{ background: var(--lr-brick); color: var(--lr-cream); }
 
 .lr-btn-outline{
@@ -159,7 +160,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .lr-hero-lead{
     font-size: 1.15rem;
-    color: #4a3f2f;
+    color: var(--lr-green);
     max-width: 48ch;
     margin: 1.1rem 0 1.8rem;
 }
@@ -212,7 +213,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .lr-card:hover{
     transform: translateY(-4px);
-    box-shadow: 0 14px 30px rgba(43,33,22,.14);
+    box-shadow: 0 14px 30px rgba(51,25,17,.14);
 }
 .lr-card-media{
     display: flex;
@@ -279,7 +280,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .lr-buscador{ flex: 1 1 13rem; min-width: 0; max-width: 20rem; }
 .lr-buscador .form-control{ border-radius: 999px; border: 1.5px solid var(--lr-ink); padding: .45rem 1.1rem; }
-.lr-contador{ margin: var(--lr-space-2) 0 var(--lr-space-3); font-size: .85rem; color: #6b5a52; min-height: 1.3em; }
+.lr-contador{ margin: var(--lr-space-2) 0 var(--lr-space-3); font-size: .85rem; color: var(--lr-muted); min-height: 1.3em; }
 
 /* ---------- Estados del servicio: carga / error / vacío ---------- */
 .lr-estado{
@@ -292,7 +293,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     border-radius: var(--lr-radius);
     background: rgba(230,204,196,.35);
 }
-.lr-estado--error{ border-color: #b3261e; background: rgba(179,38,30,.07); }
+.lr-estado--error{ border-color: var(--lr-brick-dark); background: rgba(136,67,46,.07); }
 .lr-estado-icono{ font-size: 2rem; line-height: 1; color: var(--lr-brick); flex-shrink: 0; }
 .lr-estado-texto{ display: flex; flex-direction: column; gap: .15rem; flex: 1 1 14rem; min-width: 0; }
 
@@ -301,7 +302,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     padding: var(--lr-space-3);
     border: 1px solid var(--lr-line);
     border-radius: var(--lr-radius);
-    background: #fff;
+    background: var(--lr-cream);
 }
 .lr-pedido-head{
     display: flex;
@@ -319,7 +320,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     font-size: .8rem;
     font-weight: 700;
 }
-.lr-pedido-vacio{ margin: 0 0 var(--lr-space-3); color: #6b5a52; font-size: .92rem; }
+.lr-pedido-vacio{ margin: 0 0 var(--lr-space-3); color: var(--lr-muted); font-size: .92rem; }
 .lr-pedido-lista{ list-style: none; margin: 0 0 var(--lr-space-2); padding: 0; }
 .lr-pedido-item{
     display: flex;
@@ -332,7 +333,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .lr-pedido-info{ display: flex; flex-direction: column; flex: 1 1 8rem; min-width: 0; }
 .lr-pedido-nombre{ font-weight: 600; overflow-wrap: anywhere; }
-.lr-pedido-precio{ font-size: .8rem; color: #6b5a52; }
+.lr-pedido-precio{ font-size: .8rem; color: var(--lr-muted); }
 .lr-pedido-subtotal{ font-weight: 700; margin-left: auto; }
 .lr-cantidad{ display: inline-flex; align-items: center; gap: .25rem; }
 .lr-cantidad-valor{ min-width: 1.6rem; text-align: center; font-weight: 600; }
@@ -352,7 +353,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     line-height: 1;
 }
 .lr-cantidad-btn:hover{ background: var(--lr-ink); color: var(--lr-cream); }
-.lr-quitar{ border-color: transparent; color: #8a3a2a; }
+.lr-quitar{ border-color: transparent; color: var(--lr-brick-dark); }
 .lr-quitar:hover{ background: rgba(170,84,57,.12); }
 .lr-pedido-total{
     display: flex;
@@ -379,7 +380,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     color: var(--lr-cream);
     font-weight: 600;
     text-decoration: none;
-    box-shadow: 0 8px 20px rgba(43,33,22,.3);
+    box-shadow: 0 8px 20px rgba(51,25,17,.3);
 }
 .lr-fab:hover{ color: var(--lr-cream); background: var(--lr-brick-dark); }
 
@@ -408,12 +409,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .lr-form .form-control,
 .lr-form .form-select{
     border-radius: .45rem;
-    border: 1.5px solid rgba(43,33,22,.2);
+    border: 1.5px solid rgba(51,25,17,.2);
     padding: .65rem .85rem;
 }
 .lr-form .form-control:focus{
     border-color: var(--lr-brick);
-    box-shadow: 0 0 0 .2rem rgba(168,70,47,.15);
+    box-shadow: 0 0 0 .2rem rgba(170,84,57,.15);
 }
 .lr-form label{ font-weight: 600; margin-bottom:.3rem; }
 
@@ -438,16 +439,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 /* ---------- Footer ---------- */
 .lr-footer{
     background: var(--lr-ink);
-    color: rgba(251,246,236,.75);
+    color: rgba(247,238,235,.75);
     padding: 3.5rem 0 1.75rem;
 }
 .lr-brand-footer{ color: var(--lr-cream); margin-bottom:.6rem; }
 .lr-footer-text{ font-size:.92rem; }
 .lr-footer-heading{ color: var(--lr-cream); font-weight:700; margin-bottom:.85rem; }
-.lr-footer-links a{ color: rgba(251,246,236,.72); text-decoration:none; display:block; margin-bottom:.5rem; font-size:.92rem; }
+.lr-footer-links a{ color: rgba(247,238,235,.72); text-decoration:none; display:block; margin-bottom:.5rem; font-size:.92rem; }
 .lr-footer-links a:hover{ color: var(--lr-gold); }
-.lr-footer-rule{ border-color: rgba(251,246,236,.15); margin: 1.5rem 0 1.1rem; }
-.lr-footer-small{ font-size:.8rem; color: rgba(251,246,236,.55); }
+.lr-footer-rule{ border-color: rgba(247,238,235,.15); margin: 1.5rem 0 1.1rem; }
+.lr-footer-small{ font-size:.8rem; color: rgba(247,238,235,.55); }
 
 /* ---------- Botón volver arriba ---------- */
 .lr-back-top{
@@ -461,7 +462,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     color: var(--lr-cream);
     font-size: 1.2rem;
     display:flex; align-items:center; justify-content:center;
-    box-shadow: 0 8px 20px rgba(43,33,22,.3);
+    box-shadow: 0 8px 20px rgba(51,25,17,.3);
     opacity: 0;
     pointer-events: none;
     transform: translateY(10px);
@@ -482,7 +483,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     color: var(--lr-cream);
     padding: .9rem 1.1rem;
     border-radius: .5rem;
-    box-shadow: 0 12px 26px rgba(0,0,0,.2);
+    box-shadow: 0 12px 26px rgba(51,25,17,.2);
     transform: translateX(120%);
     transition: transform .25s ease;
 }
@@ -538,3 +539,79 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .lr-table-wrap{ overflow-x: auto; }
 .lr-stock-input{ width: 5.5rem; min-width: 0; }
 .lr-pedido-lista:empty{ display:none; }
+
+/* ============================================================
+   Paleta única en los componentes de Bootstrap
+   Bootstrap trae azul, verde, amarillo, rojo y celeste propios. Aquí se reemplazan por los siete
+   colores de la paleta (monocromática, base #AA5439), para que las pantallas conectadas al backend
+   (acceso, pago, mis pedidos, panel) usen los mismos colores que el resto del sitio.
+   El estado nunca depende solo del color: cada insignia y aviso lleva su texto.
+   ============================================================ */
+:root{
+    --bs-primary-rgb: 170,84,57;      /* #AA5439 */
+    --bs-success-rgb: 77,38,25;       /* #4D2619 */
+    --bs-danger-rgb: 136,67,46;       /* #88432E */
+    --bs-warning-rgb: 204,152,136;    /* #CC9888 */
+    --bs-info-rgb: 230,204,196;       /* #E6CCC4 */
+    --bs-secondary-rgb: 77,38,25;     /* #4D2619 */
+    --bs-dark-rgb: 51,25,17;          /* #331911 */
+    --bs-light-rgb: 247,238,235;      /* #F7EEEB */
+    --bs-secondary-color: var(--lr-muted);
+    --bs-border-color: var(--lr-line);
+    --bs-emphasis-color-rgb: 51,25,17;
+    --bs-focus-ring-color: rgba(170,84,57,.3);
+    --bs-link-color-rgb: 170,84,57;   /* enlaces: Bootstrap 5.3 usa la variante -rgb */
+    --bs-link-hover-color-rgb: 136,67,46;
+}
+.text-muted{ color: var(--lr-muted) !important; }
+
+/* Insignias de estado: texto oscuro sobre tonos claros, texto claro sobre tonos oscuros */
+.text-bg-primary, .text-bg-success, .text-bg-danger, .text-bg-dark{ color: var(--lr-cream) !important; }
+.text-bg-warning, .text-bg-info, .text-bg-light{ color: var(--lr-ink) !important; }
+.text-bg-secondary{ background-color: var(--lr-cream) !important; color: var(--lr-ink) !important; box-shadow: inset 0 0 0 1px var(--lr-gold); }
+
+/* Avisos */
+.alert{ --bs-alert-color: var(--lr-ink); --bs-alert-link-color: var(--lr-brick-dark); border-left-width: .35rem; }
+.alert-danger{ --bs-alert-bg: var(--lr-kraft); --bs-alert-border-color: var(--lr-brick-dark); }
+.alert-warning{ --bs-alert-bg: var(--lr-cream); --bs-alert-border-color: var(--lr-gold); }
+.alert-success{ --bs-alert-bg: var(--lr-cream); --bs-alert-border-color: var(--lr-green); }
+.alert-secondary, .alert-info{ --bs-alert-bg: var(--lr-cream); --bs-alert-border-color: var(--lr-kraft); }
+
+/* Botones */
+.btn-primary{
+    --bs-btn-color: var(--lr-cream); --bs-btn-bg: var(--lr-brick); --bs-btn-border-color: var(--lr-brick);
+    --bs-btn-hover-color: var(--lr-cream); --bs-btn-hover-bg: var(--lr-brick-dark); --bs-btn-hover-border-color: var(--lr-brick-dark);
+    --bs-btn-active-color: var(--lr-cream); --bs-btn-active-bg: var(--lr-brick-dark); --bs-btn-active-border-color: var(--lr-brick-dark);
+    --bs-btn-disabled-color: var(--lr-ink); --bs-btn-disabled-bg: var(--lr-gold); --bs-btn-disabled-border-color: var(--lr-gold);
+    --bs-btn-focus-shadow-rgb: 170,84,57;
+}
+.btn-danger{
+    --bs-btn-color: var(--lr-cream); --bs-btn-bg: var(--lr-brick-dark); --bs-btn-border-color: var(--lr-brick-dark);
+    --bs-btn-hover-color: var(--lr-cream); --bs-btn-hover-bg: var(--lr-green); --bs-btn-hover-border-color: var(--lr-green);
+    --bs-btn-active-color: var(--lr-cream); --bs-btn-active-bg: var(--lr-green); --bs-btn-active-border-color: var(--lr-green);
+    --bs-btn-focus-shadow-rgb: 136,67,46;
+}
+.btn-outline-danger{
+    --bs-btn-color: var(--lr-brick-dark); --bs-btn-border-color: var(--lr-brick-dark);
+    --bs-btn-hover-color: var(--lr-cream); --bs-btn-hover-bg: var(--lr-brick-dark); --bs-btn-hover-border-color: var(--lr-brick-dark);
+    --bs-btn-active-color: var(--lr-cream); --bs-btn-active-bg: var(--lr-brick-dark); --bs-btn-active-border-color: var(--lr-brick-dark);
+    --bs-btn-focus-shadow-rgb: 136,67,46;
+}
+
+/* Formularios, tablas, pestañas y menús */
+.form-control, .form-select{ background-color: var(--lr-cream); border-color: var(--lr-gold); color: var(--lr-ink); }
+.form-control:focus, .form-select:focus{ background-color: var(--lr-cream); border-color: var(--lr-brick); box-shadow: 0 0 0 .2rem rgba(170,84,57,.25); color: var(--lr-ink); }
+.form-check-input:checked{ background-color: var(--lr-brick); border-color: var(--lr-brick); }
+.table{ --bs-table-color: var(--lr-ink); --bs-table-bg: transparent; --bs-table-border-color: var(--lr-line);
+        --bs-table-striped-bg: rgba(230,204,196,.35); --bs-table-hover-bg: rgba(230,204,196,.5); --bs-table-striped-color: var(--lr-ink); --bs-table-hover-color: var(--lr-ink); }
+.nav-tabs{ --bs-nav-tabs-border-color: var(--lr-gold); --bs-nav-tabs-link-active-bg: var(--lr-cream); --bs-nav-tabs-link-active-color: var(--lr-ink);
+           --bs-nav-tabs-link-active-border-color: var(--lr-gold) var(--lr-gold) var(--lr-cream); --bs-nav-tabs-link-hover-border-color: var(--lr-kraft) var(--lr-kraft) var(--lr-gold);
+           --bs-nav-link-color: var(--lr-brick); --bs-nav-link-hover-color: var(--lr-brick-dark); }
+.nav-pills{ --bs-nav-pills-link-active-bg: var(--lr-brick); --bs-nav-pills-link-active-color: var(--lr-cream); --bs-nav-link-color: var(--lr-brick); --bs-nav-link-hover-color: var(--lr-brick-dark); }
+.dropdown-menu{ --bs-dropdown-bg: var(--lr-cream); --bs-dropdown-color: var(--lr-ink); --bs-dropdown-border-color: var(--lr-gold); --bs-dropdown-link-color: var(--lr-ink);
+                --bs-dropdown-link-hover-bg: var(--lr-kraft); --bs-dropdown-link-hover-color: var(--lr-ink); --bs-dropdown-link-active-bg: var(--lr-brick); --bs-dropdown-link-active-color: var(--lr-cream);
+                --bs-dropdown-divider-bg: var(--lr-kraft); }
+.modal-content{ --bs-modal-bg: var(--lr-cream); --bs-modal-color: var(--lr-ink); --bs-modal-border-color: var(--lr-gold); --bs-modal-header-border-color: var(--lr-kraft); --bs-modal-footer-border-color: var(--lr-kraft); }
+.card{ --bs-card-bg: var(--lr-cream); --bs-card-border-color: var(--lr-kraft); --bs-card-cap-bg: var(--lr-kraft); --bs-card-color: var(--lr-ink); }
+.list-group{ --bs-list-group-bg: var(--lr-cream); --bs-list-group-color: var(--lr-ink); --bs-list-group-border-color: var(--lr-kraft); }
+.spinner-border{ color: var(--lr-brick); }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ejecuta las 26 operaciones externas contra el stack local y guarda una solicitud/respuesta REAL de cada una
+"""Ejecuta las 27 operaciones externas contra el stack local y guarda una solicitud/respuesta REAL de cada una
 (Módulo 1: «ejemplo JSON con datos ficticios»). Se redactan cookies y secretos."""
 import hashlib, hmac, json, sys, time, uuid
 from pathlib import Path
@@ -66,11 +66,15 @@ def main():
         call("S26", admin, "POST", "/admin/maintenance/sweep")
         r, o2 = call("S12", ana, "POST", "/orders", {"items": [{"product_id": "p02", "qty": 1}]}, note="segundo pedido, para cancelar")
         call("S15", ana, "POST", f"/orders/{o2['id']}/cancel")
+        r, tk = call("S27", anon, "POST", "/auth/token", {"email": "beto@ejemplo.cl", "password": "<contraseña de prueba>"}, note="forma del contrato; contraseña redactada → 401")
+        rt = httpx.post(st.base + P + "/auth/token", json={"email": "beto@ejemplo.cl", "password": st.seed_password}, timeout=10).json()
+        rt["access_token"] = "<token opaco redactado>"
+        LOG["S27"].append(("credenciales correctas (token redactado)", "POST", "/auth/token", {"email": "beto@ejemplo.cl", "password": "<redactada>"}, None, 200, rt))
         call("S05", nuevo, "POST", "/auth/logout")
         baja = client(); baja.post(P + "/auth/register", json={"email": f"baja-{uuid.uuid4().hex[:4]}@ejemplo.cl", "password": "Clave-ficticia-123", "nombre": "Para Baja"})
         call("S09", baja, "DELETE", "/account")
 
-        out = ["# Ejemplos reales de contratos S01–S26 (Módulo 1)\n",
+        out = ["# Ejemplos reales de contratos S01–S27 (Módulo 1)\n",
                "Generado por `python scripts/ejemplos_contratos.py` ejecutando cada operación contra el stack local con **datos ficticios**. Ids, fechas y referencias son de esa ejecución; cookies y firmas se redactan.\n"]
         for sid in sorted(LOG):
             for note, m, path, body, hd, code, data in LOG[sid]:

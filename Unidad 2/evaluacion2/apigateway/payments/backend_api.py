@@ -25,6 +25,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
+from lr_common.ports import default_url
 from lr_common.client import ServiceClient
 from lr_common.db import db_ping, get_db
 from lr_common.secrets import SecretUnavailable, secrets
@@ -34,7 +35,7 @@ SERVICE = "payments"
 db = get_db(SERVICE)
 app = create_app(SERVICE, ready_checks={"db": lambda: db_ping(db)})
 guard = edge_guard(SERVICE, allowed=["gateway", "orders"], identity_from=["gateway"])
-orders = ServiceClient(SERVICE, "orders", "LR_ORDERS_URL", "http://orders:8000", timeout=4.0)
+orders = ServiceClient(SERVICE, "orders", "LR_ORDERS_URL", default_url("orders"), timeout=4.0)
 TOLERANCE = int(os.getenv("LR_WEBHOOK_TOLERANCE_SECONDS", "300"))
 
 

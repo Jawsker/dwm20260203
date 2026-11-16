@@ -3,7 +3,7 @@
 | S01 | Gateway externo | GET | `/api/v1/products` | anónimo | inventory: `GET /internal/products` | límite «public»; cuerpo ≤ 4096 B; filtros validados (400), paginación acotada, solo campos de catálogo | edge/gateway__inventory |
 | S02 | Gateway externo | GET | `/api/v1/products/{product_id}` | anónimo | inventory: `GET /internal/products/{product_id}` | límite «public»; cuerpo ≤ 4096 B; id acotado a [A-Za-z0-9_.-]{1,80} | edge/gateway__inventory |
 | S03 | Gateway externo | POST | `/api/v1/auth/register` | anónimo | orquestación en gateway (`register`) | límite «login»; cuerpo ≤ 1024 B; el rol nunca viene del cliente; compensación si falla clients | edge/gateway__auth, edge/gateway__clients |
-| S04 | Gateway externo | POST | `/api/v1/auth/login` | anónimo | orquestación en gateway (`login`) | límite «login»; cuerpo ≤ 512 B; bloqueo por intentos, cookie HttpOnly, token jamás en el cuerpo | edge/gateway__auth |
+| S04 | Gateway externo | POST | `/api/v1/auth/login` | anónimo | orquestación en gateway (`login`) | límite «login»; cuerpo ≤ 512 B; bloqueo por intentos, cookie HttpOnly, token jamás en el cuerpo de esta ruta | edge/gateway__auth |
 | S05 | Gateway externo | POST | `/api/v1/auth/logout` | sesión · Cliente, Personal, Admin., Auditoría | orquestación en gateway (`logout`) | límite «auth»; cuerpo ≤ 0 B; revocación inmediata de la sesión | edge/gateway__auth |
 | S06 | Gateway externo | GET | `/api/v1/auth/session` | sesión · Cliente, Personal, Admin., Auditoría | orquestación en gateway (`session`) | límite «auth»; cuerpo ≤ 4096 B; validación en el servicio | edge/gateway__auth |
 | S07 | Gateway externo | GET | `/api/v1/clients/me` | sesión · Cliente | clients: `GET /internal/clients/me` | límite «auth»; cuerpo ≤ 4096 B; el id sale de la sesión, no de la URL | edge/gateway__clients |
@@ -26,3 +26,4 @@
 | S24 | Gateway externo | PUT | `/api/v1/admin/products/{product_id}/stock` | sesión · Personal, Admin. | inventory: `PUT /internal/products/{product_id}/stock` | límite «auth»; cuerpo ≤ 128 B; validación en el servicio | edge/gateway__inventory |
 | S25 | Gateway externo | POST | `/api/v1/admin/users` | sesión · Admin. | auth: `POST /internal/users` | límite «auth»; cuerpo ≤ 512 B; crea personal/auditoría; solo administración | edge/gateway__auth |
 | S26 | Gateway externo | POST | `/api/v1/admin/maintenance/sweep` | sesión · Admin. | orders: `POST /internal/orders/maintenance/sweep` | límite «auth»; cuerpo ≤ 0 B; expira pedidos y libera stock | edge/gateway__orders |
+| S27 | Gateway externo | POST | `/api/v1/auth/token` | anónimo | orquestación en gateway (`token`) | límite «login»; cuerpo ≤ 512 B; bloqueo por intentos; entrega token Bearer sin cookie (clientes que no son navegador) | edge/gateway__auth |

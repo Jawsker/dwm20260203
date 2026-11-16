@@ -19,7 +19,7 @@ query {
       "total": 1,
       "items": [
         {
-          "id": "LR-F1E40D4B",
+          "id": "LR-24CD3CD3",
           "estado": "awaiting_payment",
           "total": 9370,
           "lineas": [
@@ -88,7 +88,7 @@ query {
       "total": 1,
       "items": [
         {
-          "id": "LR-F1E40D4B",
+          "id": "LR-24CD3CD3",
           "estado": "awaiting_payment",
           "total": 9370,
           "lineas": [
@@ -124,7 +124,7 @@ query {
 ## 3. Otro cliente (Beto) pide el pedido de Ana por id
 
 ```graphql
-query { resumenPedido(id: "LR-F1E40D4B") { id total } }
+query { resumenPedido(id: "LR-24CD3CD3") { id total } }
 ```
 ```json
 {

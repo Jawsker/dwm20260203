@@ -98,7 +98,7 @@
         <div class="row align-items-center g-5">
             <div class="col-lg-7">
                 <h2>"Después del diagnóstico de mi hija, encontrar pan de verdad fue un alivio."</h2>
-                <p class="mt-3" style="color:rgba(251,246,236,.78)">
+                <p class="mt-3" style="color:rgba(247,238,235,.78)">
                     Este es el mensaje que más recibimos, y la razón por la que existe Libre &amp; Rico:
                     que comer sin gluten no signifique renunciar a la mesa familiar.
                 </p>

@@ -41,7 +41,7 @@ ROUTES: list[Route] = [
     Route("S03", "POST", "/auth/register", None, "", auth="none", rate="login", handler="register", body_max=1024,
           cred="edge/gateway__auth, edge/gateway__clients", controls="el rol nunca viene del cliente; compensación si falla clients"),
     Route("S04", "POST", "/auth/login", None, "", auth="none", rate="login", handler="login", body_max=512,
-          cred="edge/gateway__auth", controls="bloqueo por intentos, cookie HttpOnly, token jamás en el cuerpo"),
+          cred="edge/gateway__auth", controls="bloqueo por intentos, cookie HttpOnly, token jamás en el cuerpo de esta ruta"),
     Route("S05", "POST", "/auth/logout", None, "", rate="auth", handler="logout", body_max=0, cred="edge/gateway__auth",
           controls="revocación inmediata de la sesión"),
     Route("S06", "GET", "/auth/session", None, "", rate="auth", handler="session", cred="edge/gateway__auth"),
@@ -87,4 +87,6 @@ ROUTES: list[Route] = [
           controls="crea personal/auditoría; solo administración"),
     Route("S26", "POST", "/admin/maintenance/sweep", "orders", "/internal/orders/maintenance/sweep", roles=("admin",),
           body_max=0, cred="edge/gateway__orders", controls="expira pedidos y libera stock"),
+    Route("S27", "POST", "/auth/token", None, "", auth="none", rate="login", handler="token", body_max=512,
+          cred="edge/gateway__auth", controls="bloqueo por intentos; entrega token Bearer sin cookie (clientes que no son navegador)"),
 ]

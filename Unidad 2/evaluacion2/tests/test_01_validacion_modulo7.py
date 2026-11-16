@@ -74,15 +74,15 @@ def test_V4_pedido_ajeno_no_devuelve_datos(ana, beto, staff):
 def test_V5_acceso_directo_al_backend_sin_identidad(stack, ana):
     """V5 · entrada: llamadas directas a los puertos de servicios privados · identidad: ninguna / clave falsa / cabeceras
     de identidad inventadas · esperado: 401. Verifica: cada servicio (clave de arista por llamador, comparación en tiempo constante)."""
-    for port, path in [(8003, "/internal/products"), (8004, "/internal/orders"), (8002, "/internal/clients/me"),
-                       (8001, "/internal/login"), (8005, "/internal/payments"), (8006, "/graphql")]:
+    for port, path in [(9000, "/internal/products"), (9100, "/internal/orders"), (9200, "/internal/clients/me"),
+                       (8100, "/internal/login"), (9300, "/internal/payments"), (8090, "/graphql")]:
         r = httpx.request("POST" if path in ("/internal/login", "/internal/payments", "/graphql") else "GET",
                           f"http://127.0.0.1:{port}{path}", json={}, timeout=5)
         assert r.status_code == 401, (port, path, r.status_code)
         assert r.json()["error"]["code"] == "edge_unauthorized"
     forged = {"X-Edge-Caller": "gateway", "X-Edge-Key": "clave-inventada", "X-Auth-User": "u_admin", "X-Auth-Role": "admin"}
-    assert httpx.get("http://127.0.0.1:8004/internal/orders", headers=forged, timeout=5).status_code == 401
-    assert httpx.get("http://127.0.0.1:8003/internal/products", headers={"X-Edge-Caller": "nadie", "X-Edge-Key": "x"}, timeout=5).status_code == 401
+    assert httpx.get("http://127.0.0.1:9100/internal/orders", headers=forged, timeout=5).status_code == 401
+    assert httpx.get("http://127.0.0.1:9000/internal/products", headers={"X-Edge-Caller": "nadie", "X-Edge-Key": "x"}, timeout=5).status_code == 401
     # Cabeceras de identidad enviadas por el navegador al gateway se descartan: sigue siendo Ana.
     r = ana.get("/auth/session", headers={"X-Auth-User": "u_admin", "X-Auth-Role": "admin", "X-Edge-Caller": "gateway"})
     assert r.json()["user_id"] == "u_ana" and r.json()["role"] == "customer"
@@ -144,3 +144,22 @@ def test_V6_confirmar_pago_con_datos_alterados(stack, ana, beto, staff):
     assert stock_of(staff, "p04")["stock"] == after["stock"]
     # 8) un pago ya resuelto no se puede volver a decidir
     assert ana.post(f"/payments/{ref}/sandbox-decision", json={"outcome": "reject"}).status_code == 409
+
+
+def test_token_bearer_para_clientes_que_no_son_navegador(stack):
+    """S27 · entrada: POST /auth/token y luego Authorization: Bearer · identidad: cliente · esperado: mismo control de sesión y rol que con cookie; sin cookie emitida; token inválido → 401 · componente: gateway + auth."""
+    base = stack.base + "/api/v1"
+    r = httpx.post(base + "/auth/token", json={"email": "ana@ejemplo.cl", "password": stack.seed_password}, timeout=10)
+    assert r.status_code == 200 and "set-cookie" not in r.headers
+    tok = r.json()["access_token"]
+    assert r.json()["token_type"] == "bearer"
+    h = {"Authorization": f"Bearer {tok}"}
+    assert httpx.get(base + "/auth/session", headers=h, timeout=10).json()["role"] == "customer"
+    creado = httpx.post(base + "/orders", json={"items": [{"product_id": "p05", "qty": 1}]}, headers=h, timeout=10)
+    assert creado.status_code == 201
+    assert httpx.get(base + "/admin/contact", headers=h, timeout=10).status_code == 403          # el rol sigue mandando
+    assert httpx.get(base + "/auth/session", headers={"Authorization": "Bearer falso"}, timeout=10).status_code == 401
+    assert httpx.post(base + "/auth/token", json={"email": "ana@ejemplo.cl", "password": "mala-clave-000"}, timeout=10).status_code == 401
+    httpx.post(base + f"/orders/{creado.json()['id']}/cancel", headers=h, timeout=10)
+    assert httpx.post(base + "/auth/logout", headers=h, timeout=10).status_code == 204          # revocación
+    assert httpx.get(base + "/auth/session", headers=h, timeout=10).status_code == 401

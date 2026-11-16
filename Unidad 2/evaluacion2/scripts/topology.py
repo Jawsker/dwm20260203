@@ -10,7 +10,7 @@ EDGES = [("gateway", d) for d in ("auth", "clients", "inventory", "orders", "pay
 ]
 
 # secretos que no son de arista: referencia -> servicios que pueden leerlo
-EXTRA = {"payments/webhook": ("payments",)}
+EXTRA = {"payments/webhook": ("payments",), "stomp/broker": ("orders",)}
 
 
 def vault_paths_for(service: str) -> list[str]:

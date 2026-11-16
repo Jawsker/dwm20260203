@@ -1,4 +1,4 @@
-# Ejemplos reales de contratos S01–S26 (Módulo 1)
+# Ejemplos reales de contratos S01–S27 (Módulo 1)
 
 Generado por `python scripts/ejemplos_contratos.py` ejecutando cada operación contra el stack local con **datos ficticios**. Ids, fechas y referencias son de esa ejecución; cookies y firmas se redactan.
 
@@ -45,7 +45,7 @@ Respuesta **400**:
   "error": {
     "code": "invalid_filter",
     "message": "Categoría desconocida.",
-    "correlation_id": "9c2710f0ea81436c"
+    "correlation_id": "5244515639944fb8"
   }
 }
 ```
@@ -70,7 +70,7 @@ Respuesta **200**:
 Solicitud:
 ```json
 {
-  "email": "cliente-b4de@ejemplo.cl",
+  "email": "cliente-8771@ejemplo.cl",
   "password": "Clave-ficticia-123",
   "nombre": "Cliente Ficticio",
   "telefono": "+56 9 1234 5678"
@@ -80,8 +80,8 @@ Respuesta **201**:
 ```json
 {
   "user": {
-    "id": "u_24774c0819e0",
-    "email": "cliente-b4de@ejemplo.cl",
+    "id": "u_a69d73c3c700",
+    "email": "cliente-8771@ejemplo.cl",
     "role": "customer"
   }
 }
@@ -102,7 +102,7 @@ Respuesta **401**:
   "error": {
     "code": "invalid_credentials",
     "message": "Correo o contraseña incorrectos.",
-    "correlation_id": "89973e0a947a4850"
+    "correlation_id": "0a98fa3cf6e44f12"
   }
 }
 ```
@@ -119,9 +119,9 @@ null
 Respuesta **200**:
 ```json
 {
-  "user_id": "u_24774c0819e0",
+  "user_id": "u_a69d73c3c700",
   "role": "customer",
-  "email": "cliente-b4de@ejemplo.cl"
+  "email": "cliente-8771@ejemplo.cl"
 }
 ```
 
@@ -130,7 +130,7 @@ Respuesta **200**:
 Respuesta **200**:
 ```json
 {
-  "id": "u_24774c0819e0",
+  "id": "u_a69d73c3c700",
   "nombre": "Cliente Ficticio",
   "telefono": "+56 9 1234 5678",
   "direccion": null
@@ -148,7 +148,7 @@ Solicitud:
 Respuesta **200**:
 ```json
 {
-  "id": "u_24774c0819e0",
+  "id": "u_a69d73c3c700",
   "nombre": "Cliente Ficticio",
   "telefono": "+56 9 1234 5678",
   "direccion": "Calle Ficticia 123, Santiago"
@@ -175,7 +175,7 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "id": "4dcb5a347875",
+  "id": "26704b9fd1b9",
   "status": "nuevo"
 }
 ```
@@ -187,12 +187,12 @@ Respuesta **200**:
 {
   "items": [
     {
-      "id": "4dcb5a347875",
+      "id": "26704b9fd1b9",
       "nombre": "Visitante Ficticio",
       "correo": "visita@ejemplo.cl",
       "mensaje": "¿Tienen pan sin gluten por encargo?",
       "status": "nuevo",
-      "created_at": "2026-11-10T03:00:10Z"
+      "created_at": "2026-11-16T15:30:42Z"
     }
   ]
 }
@@ -221,12 +221,12 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "id": "LR-50E6A1E0",
+  "id": "LR-12730330",
   "status": "awaiting_payment",
   "total": 9370,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:10Z",
-  "expires_at": "2026-11-10T03:15:10Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p01",
@@ -268,12 +268,12 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "id": "LR-19A5F149",
+  "id": "LR-01550049",
   "status": "awaiting_payment",
   "total": 3490,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:11Z",
-  "expires_at": "2026-11-10T03:15:11Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p02",
@@ -292,17 +292,17 @@ Respuesta **201**:
 }
 ```
 
-## S13 · `GET /api/v1/orders/LR-50E6A1E0`
+## S13 · `GET /api/v1/orders/LR-12730330`
 
 Respuesta **200**:
 ```json
 {
-  "id": "LR-50E6A1E0",
+  "id": "LR-12730330",
   "status": "awaiting_payment",
   "total": 9370,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:10Z",
-  "expires_at": "2026-11-10T03:15:10Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p01",
@@ -328,7 +328,7 @@ Respuesta **200**:
 }
 ```
 
-## S13 · `GET /api/v1/orders/LR-50E6A1E0` — otro cliente → no ve datos
+## S13 · `GET /api/v1/orders/LR-12730330` — otro cliente → no ve datos
 
 Respuesta **404**:
 ```json
@@ -336,34 +336,34 @@ Respuesta **404**:
   "error": {
     "code": "not_found",
     "message": "Pedido no encontrado.",
-    "correlation_id": "85d982c2c4164e56"
+    "correlation_id": "287692c4fbc54bc1"
   }
 }
 ```
 
-## S14 · `POST /api/v1/orders/LR-50E6A1E0/pay`
+## S14 · `POST /api/v1/orders/LR-12730330/pay`
 
 Respuesta **200**:
 ```json
 {
-  "order_id": "LR-50E6A1E0",
-  "payment_id": "pay_32c83965d844927f",
-  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "order_id": "LR-12730330",
+  "payment_id": "pay_c8f653a783a4f210",
+  "provider_ref": "sbx_kDMu1tJPD0CEWGd7NhvOrA",
   "amount": 9370
 }
 ```
 
-## S15 · `POST /api/v1/orders/LR-19A5F149/cancel`
+## S15 · `POST /api/v1/orders/LR-01550049/cancel`
 
 Respuesta **200**:
 ```json
 {
-  "id": "LR-19A5F149",
+  "id": "LR-01550049",
   "status": "cancelled",
   "total": 3490,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:11Z",
-  "expires_at": "2026-11-10T03:15:11Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p02",
@@ -382,7 +382,7 @@ Respuesta **200**:
 }
 ```
 
-## S16 · `POST /api/v1/admin/orders/LR-50E6A1E0/status`
+## S16 · `POST /api/v1/admin/orders/LR-12730330/status`
 
 Solicitud:
 ```json
@@ -393,12 +393,12 @@ Solicitud:
 Respuesta **200**:
 ```json
 {
-  "id": "LR-50E6A1E0",
+  "id": "LR-12730330",
   "status": "preparing",
   "total": 9370,
   "currency": "CLP",
-  "created_at": "2026-11-10T03:00:10Z",
-  "expires_at": "2026-11-10T03:15:10Z",
+  "created_at": "2026-11-16T15:30:42Z",
+  "expires_at": "2026-11-16T15:45:42Z",
   "items": [
     {
       "product_id": "p01",
@@ -424,20 +424,20 @@ Respuesta **200**:
 }
 ```
 
-## S17 · `GET /api/v1/payments/sbx_n15zdgl0aAOdhbOCYDXnFg`
+## S17 · `GET /api/v1/payments/sbx_kDMu1tJPD0CEWGd7NhvOrA`
 
 Respuesta **200**:
 ```json
 {
-  "payment_id": "pay_32c83965d844927f",
-  "order_id": "LR-50E6A1E0",
+  "payment_id": "pay_c8f653a783a4f210",
+  "order_id": "LR-12730330",
   "amount": 9370,
   "currency": "CLP",
   "status": "pending"
 }
 ```
 
-## S18 · `POST /api/v1/payments/sbx_n15zdgl0aAOdhbOCYDXnFg/sandbox-decision`
+## S18 · `POST /api/v1/payments/sbx_kDMu1tJPD0CEWGd7NhvOrA/sandbox-decision`
 
 Solicitud:
 ```json
@@ -448,7 +448,7 @@ Solicitud:
 Respuesta **200**:
 ```json
 {
-  "event_id": "evt_50aa4ae980bed08e",
+  "event_id": "evt_2f702b96da7d6bb5",
   "webhook_status": 200
 }
 ```
@@ -460,9 +460,9 @@ Cabeceras relevantes: `{"X-Provider-Signature": "t=<epoch>,v1=<hmac-sha256 redac
 Solicitud:
 ```json
 {
-  "event_id": "evt_demo_0f7efe",
+  "event_id": "evt_demo_6e0b08",
   "type": "payment.succeeded",
-  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "provider_ref": "sbx_kDMu1tJPD0CEWGd7NhvOrA",
   "amount": 9370
 }
 ```
@@ -480,9 +480,9 @@ Cabeceras relevantes: `{"X-Provider-Signature": "t=<epoch>,v1=firma-falsa"}`
 Solicitud:
 ```json
 {
-  "event_id": "evt_demo_0f7efe",
+  "event_id": "evt_demo_6e0b08",
   "type": "payment.succeeded",
-  "provider_ref": "sbx_n15zdgl0aAOdhbOCYDXnFg",
+  "provider_ref": "sbx_kDMu1tJPD0CEWGd7NhvOrA",
   "amount": 9370
 }
 ```
@@ -492,7 +492,7 @@ Respuesta **401**:
   "error": {
     "code": "invalid_signature",
     "message": "Firma del webhook inválida o vencida.",
-    "correlation_id": "7e05d9a5f7b841e9"
+    "correlation_id": "7adedcd7024e48b5"
   }
 }
 ```
@@ -513,7 +513,7 @@ Respuesta **200**:
       "total": 1,
       "items": [
         {
-          "id": "LR-50E6A1E0",
+          "id": "LR-12730330",
           "estado": "preparing",
           "total": 9370,
           "lineas": [
@@ -662,7 +662,7 @@ Respuesta **200**:
 Solicitud:
 ```json
 {
-  "email": "personal-8e77@libreyrico.test",
+  "email": "personal-d39a@libreyrico.test",
   "password": "Clave-ficticia-123",
   "role": "staff"
 }
@@ -670,7 +670,7 @@ Solicitud:
 Respuesta **201**:
 ```json
 {
-  "user_id": "u_55a856f082a7",
+  "user_id": "u_1d4abca1def9",
   "role": "staff"
 }
 ```
@@ -683,5 +683,48 @@ Respuesta **200**:
   "expired": 0,
   "released_retried": 0,
   "commits_retried": 0
+}
+```
+
+## S27 · `POST /api/v1/auth/token` — forma del contrato; contraseña redactada → 401
+
+Solicitud:
+```json
+{
+  "email": "beto@ejemplo.cl",
+  "password": "<contraseña de prueba>"
+}
+```
+Respuesta **401**:
+```json
+{
+  "error": {
+    "code": "invalid_credentials",
+    "message": "Correo o contraseña incorrectos.",
+    "correlation_id": "14bf296402d14a84"
+  }
+}
+```
+
+## S27 · `POST /api/v1/auth/token` — credenciales correctas (token redactado)
+
+Solicitud:
+```json
+{
+  "email": "beto@ejemplo.cl",
+  "password": "<redactada>"
+}
+```
+Respuesta **200**:
+```json
+{
+  "access_token": "<token opaco redactado>",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "user": {
+    "id": "u_beto",
+    "email": "beto@ejemplo.cl",
+    "role": "customer"
+  }
 }
 ```

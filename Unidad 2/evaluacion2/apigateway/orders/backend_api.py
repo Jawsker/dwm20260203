@@ -23,6 +23,8 @@ from pydantic import BaseModel, Field
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
+from lr_common import mensajeria
+from lr_common.ports import default_url
 from lr_common.client import ServiceClient
 from lr_common.db import db_ping, get_db
 from lr_common.web import ApiError, Edge, Identity, create_app, edge_guard
@@ -31,8 +33,8 @@ SERVICE = "orders"
 db = get_db(SERVICE)
 app = create_app(SERVICE, ready_checks={"db": lambda: db_ping(db)})
 guard = edge_guard(SERVICE, allowed=["gateway", "graphql", "payments"], identity_from=["gateway", "graphql"])
-inventory = ServiceClient(SERVICE, "inventory", "LR_INVENTORY_URL", "http://inventory:8000", timeout=3.0)
-payments = ServiceClient(SERVICE, "payments", "LR_PAYMENTS_URL", "http://payments:8000", timeout=4.0)
+inventory = ServiceClient(SERVICE, "inventory", "LR_INVENTORY_URL", default_url("inventory"), timeout=3.0)
+payments = ServiceClient(SERVICE, "payments", "LR_PAYMENTS_URL", default_url("payments"), timeout=4.0)
 
 TTL = int(os.getenv("LR_ORDER_TTL_SECONDS", "900"))
 RESERVING_TIMEOUT = int(os.getenv("LR_RESERVING_TIMEOUT_SECONDS", "60"))
@@ -270,6 +272,8 @@ def payment_result(order_id: str, body: PaymentResult, edge: Edge = Depends(guar
                 inventory.call("POST", f"/internal/reservations/{order_id}/commit")
             except ApiError:
                 db.orders.update_one({"_id": order_id}, {"$set": {"commit_pending": True}})  # reintenta el barrido
+            mensajeria.publicar({"evento": "pedido_pagado", "id": order_id, "estado": "paid", "total": updated["total"],
+                                 "lineas": len(updated["items"]), "fecha": iso(now())})
             return {"order_id": order_id, "status": "paid", "replayed": False}
     # Pago recibido cuando el pedido ya expiró/canceló: el dinero entró y la reserva ya no existe.
     updated = transition(order_id, ["expired", "cancelled", "rejected"], "refund_required", "payments", "late_payment",
