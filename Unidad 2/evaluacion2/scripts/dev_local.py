@@ -149,7 +149,7 @@ class Stack:
     def stop(self) -> None:
         for p in self.procs.values():
             if p.poll() is None:
-                p.send_signal(signal.SIGTERM)
+                p.terminate()  # equivale a SIGTERM en Linux/macOS y funciona en Windows
         for p in self.procs.values():
             try:
                 p.wait(timeout=5)
@@ -172,7 +172,8 @@ if __name__ == "__main__":
     print("\nPuertos:", json.dumps(PORTS))
     print("\nVault + MongoDB locales (los datos persisten)." if real else "\nBase en memoria (se pierde al detener).", "Ctrl+C para detener.")
     try:
-        signal.pause()
+        while True:  # signal.pause() no existe en Windows
+            time.sleep(1)
     except KeyboardInterrupt:
         pass
     finally:
