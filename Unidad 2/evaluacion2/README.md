@@ -88,7 +88,7 @@ En el sistema, Orders publica el evento al confirmarse un pago (define `STOMP_US
 **Usuarios de prueba** (ficticios; la contraseña la imprime `dev_local.py` o está en `LR_SEED_PASSWORD` de `deploy/.env`):
 `ana@ejemplo.cl` y `beto@ejemplo.cl` (clientes), `tienda@libreyrico.test` (personal), `admin@libreyrico.test`, `auditoria@libreyrico.test`.
 
-**Video de demostración:** el guion paso a paso, con los comandos y las líneas de registro que se ven en cada contenedor, está en [`docs/GUION-VIDEO.md`](docs/GUION-VIDEO.md). Los registros se leen en forma legible con `docker compose -f deploy/docker-compose.yml logs -f gateway | python scripts/ver_logs.py`.
+**Logs legibles:** `docker compose -f deploy/docker-compose.yml logs -f gateway | python scripts/ver_logs.py` muestra en una línea por paso lo que hace cada servicio (validación con Auth, enrutamiento, claves de servicio, operaciones en MongoDB).
 
 **Pruebas:** `pytest tests` (41 pruebas) · `python tests/browser_e2e.py` (navegador) · `python scripts/carga.py` (carga).
 
