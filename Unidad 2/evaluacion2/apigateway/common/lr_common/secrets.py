@@ -80,6 +80,8 @@ class SecretsProvider:
             if resp.status_code != 200:
                 raise SecretUnavailable(f"Vault respondió {resp.status_code} para {path}")
             data = resp.json()["data"]["data"]
+            from .logs import paso
+            paso(f"secreto '{path}' leído desde Vault (se guarda en caché {ttl} s; el valor nunca se registra)", referencia=path)
         except (httpx.HTTPError, KeyError, ValueError) as exc:
             if hit and now - hit[0] < stale_max:  # degradación controlada
                 return hit[1]

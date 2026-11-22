@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
 from lr_common.db import db_ping, get_db
+from lr_common.logs import paso
 from lr_common.web import ApiError, Edge, create_app, edge_guard
 
 SERVICE = "auth"
@@ -139,6 +140,7 @@ def login(body: Login, edge: Edge = Depends(guard)):
             if fails >= MAX_FAILS:
                 patch.update(failed_attempts=0, locked_until=t + timedelta(seconds=LOCK_SECONDS))
             db.users.update_one({"_id": user["_id"]}, {"$set": patch})
+        paso("auth-service: inicio de sesión RECHAZADO (credenciales inválidas)", 30)
         raise ApiError(401, "invalid_credentials", "Correo o contraseña incorrectos.")
     db.users.update_one({"_id": user["_id"]}, {"$set": {"failed_attempts": 0, "locked_until": None}})
     if ph.check_needs_rehash(user["pw_hash"]):
@@ -148,6 +150,8 @@ def login(body: Login, edge: Edge = Depends(guard)):
         "_id": _hash_token(token), "user_id": user["_id"], "role": user["role"],
         "created_at": t, "last_seen": t, "expires_at": t + timedelta(seconds=ABSOLUTE),
     })
+    paso(f"auth-service: inicio de sesión OK de {user['_id']} (rol {user['role']}); sesión guardada como hash SHA-256",
+         usuario=user["_id"], rol=user["role"])
     return {"token": token, "max_age": ABSOLUTE,
             "user": {"id": user["_id"], "email": user["email"], "role": user["role"]}}
 
@@ -157,12 +161,14 @@ def introspect(body: Introspect, edge: Edge = Depends(guard)):
     key = _hash_token(body.token)
     s = db.sessions.find_one({"_id": key})
     if not s:
+        paso("auth-service: autenticación FALLIDA, la sesión no existe (token desconocido o revocado)", 30)
         return {"active": False}
     t = now()
     last = s["last_seen"].replace(tzinfo=timezone.utc)
     exp = s["expires_at"].replace(tzinfo=timezone.utc)
     if t > exp or (t - last).total_seconds() > IDLE:
         db.sessions.delete_one({"_id": key})
+        paso("auth-service: autenticación FALLIDA, sesión vencida (se elimina)", 30)
         return {"active": False}
     user = db.users.find_one({"_id": s["user_id"]})
     if not user or user["status"] != "active":
@@ -170,6 +176,8 @@ def introspect(body: Introspect, edge: Edge = Depends(guard)):
         return {"active": False}
     db.sessions.update_one({"_id": key}, {"$set": {"last_seen": t}})
     # El rol se lee del usuario (no de la sesión): un cambio de rol surte efecto de inmediato.
+    paso(f"auth-service: autenticación OK → sesión válida de {user['_id']}; autorización: rol actual {user['role']}",
+         usuario=user["_id"], rol=user["role"])
     return {"active": True, "user_id": user["_id"], "role": user["role"], "email": user["email"]}
 
 

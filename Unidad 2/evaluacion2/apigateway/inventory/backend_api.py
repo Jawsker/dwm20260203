@@ -18,6 +18,7 @@ from fastapi import Depends
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
+from lr_common.logs import paso
 from lr_common.db import db_ping, get_db
 from lr_common.web import ApiError, Edge, create_app, edge_guard
 
@@ -193,6 +194,7 @@ def reserve(body: Reserve, edge: Edge = Depends(guard)):
         done.append((pid, qty))
     try:
         db.reservations.insert_one({"_id": body.order_id, "items": merged, "status": "active", "created_at": now()})
+        paso(f"inventory: stock reservado para {body.order_id} (colecciones products y reservations): {merged}", pedido=body.order_id)
     except DuplicateKeyError:  # carrera con un reintento simultáneo: deshacer lo recién descontado
         for rp, rq in done:
             db.products.update_one({"_id": rp}, {"$inc": {"available": rq, "reserved": -rq}})

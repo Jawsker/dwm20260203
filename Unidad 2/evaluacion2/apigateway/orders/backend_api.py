@@ -24,6 +24,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 from lr_common import mensajeria
+from lr_common.logs import paso
 from lr_common.ports import default_url
 from lr_common.client import ServiceClient
 from lr_common.db import db_ping, get_db
@@ -148,6 +149,8 @@ def create_order(body: NewOrder, edge: Edge = Depends(guard), idempotency_key: O
              "notes": body.notes, "status": "pending_reservation", "created_at": t, "updated_at": t,
              "payment": None, "history": [entry("pending_reservation", "customer")]}
     db.orders.insert_one(order)
+    paso(f"orders: pedido {order_id} guardado en la base (colección orders) con total ${order['total']} calculado en el servidor",
+         pedido=order_id, usuario=ident.user_id, total=order["total"])
 
     try:
         inventory.call("POST", "/internal/reservations", json={"order_id": order_id, "items": [

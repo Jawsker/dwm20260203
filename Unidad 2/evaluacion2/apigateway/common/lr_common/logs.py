@@ -54,3 +54,13 @@ def setup_logging(service: str) -> logging.Logger:
     for noisy in ("uvicorn.access", "httpx", "httpcore"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     return logging.getLogger(f"lr.{service}")
+
+
+def paso(texto: str, nivel: int = logging.INFO, **campos) -> None:
+    """Línea de registro legible que explica un paso del flujo (para demostración y auditoría).
+
+    Ejemplos: «auth-service validó la sesión», «enrutando S12 → orders», «clave de servicio verificada»,
+    «MongoDB insert en orders.orders». Nunca recibe contraseñas, tokens ni datos personales: solo ids,
+    roles, nombres de servicio, rutas y nombres de colecciones.
+    """
+    logging.getLogger("lr.paso").log(nivel, texto, extra=campos)

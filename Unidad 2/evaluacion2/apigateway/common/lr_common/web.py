@@ -21,7 +21,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .logs import correlation_id, setup_logging
+import logging
+
+from .logs import correlation_id, paso, setup_logging
 from .secrets import SecretUnavailable, secrets
 
 ROLES = ("customer", "staff", "admin", "auditor")
@@ -67,18 +69,24 @@ def edge_guard(me: str, allowed: Iterable[str], identity_from: Iterable[str] = (
         caller = request.headers.get("x-edge-caller", "")
         presented = request.headers.get("x-edge-key", "")
         if caller not in allowed or not presented:
+            paso(f"{me}: llamada RECHAZADA, sin clave de servicio válida (llamador declarado: {caller or 'ninguno'})", logging.WARNING,
+                 llamador=caller or None, ruta=request.url.path)
             raise ApiError(401, "edge_unauthorized", "Acceso directo sin identidad de servicio autorizada.")
         try:
             expected = secrets.get(f"edge/{caller}__{me}", "key")
         except SecretUnavailable as exc:
             raise ApiError(503, "secrets_unavailable", "Gestor de secretos no disponible.") from exc
         if not hmac.compare_digest(presented.encode(), expected.encode()):  # tiempo constante
+            paso(f"{me}: llamada RECHAZADA, la clave de '{caller}' no coincide con el secreto edge/{caller}__{me}", logging.WARNING,
+                 llamador=caller, ruta=request.url.path)
             raise ApiError(401, "edge_unauthorized", "Acceso directo sin identidad de servicio autorizada.")
         ident = None
         if caller in identity_from:
             uid, role = request.headers.get("x-auth-user"), request.headers.get("x-auth-role")
             if uid and role in ROLES:
                 ident = Identity(uid, role)
+        paso(f"{me}: clave de servicio de '{caller}' verificada con el secreto edge/{caller}__{me} → llamada PERMITIDA",
+             llamador=caller, ruta=request.url.path, usuario=ident.user_id if ident else None, rol=ident.role if ident else None)
         return Edge(caller, ident)
 
     return dependency

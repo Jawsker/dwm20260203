@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from lr_common.ports import default_url
 from lr_common.client import ServiceClient
+from lr_common.logs import paso
 from lr_common.logs import correlation_id
 from lr_common.web import ApiError, Identity, create_app
 from routes import PREFIX, ROUTES, Route
@@ -86,6 +87,7 @@ async def current_identity(request: Request) -> tuple[Optional[Identity], Option
     token = bearer_token(request) or request.cookies.get(COOKIE)
     if not token or len(token) > 200:
         return None, None, None
+    paso("gateway → auth-service: validando la sesión (" + ("token Bearer" if bearer_token(request) else "cookie HttpOnly") + ")")
     try:
         data = await SERVICES["auth"].acall("POST", "/internal/introspect", json={"token": token})
     except ApiError as exc:
@@ -93,7 +95,9 @@ async def current_identity(request: Request) -> tuple[Optional[Identity], Option
             raise
         data = {}
     if not data.get("active"):
+        paso("gateway: auth-service respondió sesión INVÁLIDA o vencida → 401", 30)
         return None, token, None
+    paso(f"gateway: auth-service validó la sesión → usuario {data['user_id']}, rol {data['role']}", usuario=data["user_id"], rol=data["role"])
     return Identity(data["user_id"], data["role"]), token, data.get("email")
 
 
@@ -267,9 +271,15 @@ async def dispatch(request: Request, full_path: str):
                 clear_cookie(resp)
             return resp
         if ident.role not in route.roles:
+            paso(f"gateway: autorización DENEGADA en {route.id} ({route.method} {route.path}): rol {ident.role} no está en {list(route.roles)} → 403",
+                 30, ruta_id=route.id, rol=ident.role)
             raise ApiError(403, "forbidden", "Tu rol no permite esta operación.")
+        paso(f"gateway: autorización OK en {route.id}: rol {ident.role} permitido", ruta_id=route.id, rol=ident.role)
+    else:
+        paso(f"gateway: {route.id} ({route.method} {route.path}) es pública, no requiere sesión", ruta_id=route.id)
 
     if route.handler:
+        paso(f"gateway: {route.id} la orquesta el propio gateway ({route.handler})", ruta_id=route.id)
         return await HANDLERS[route.handler](request, route, body, ident, token, email)
 
     # ---- reenvío al servicio privado con contexto verificado ----
@@ -278,11 +288,14 @@ async def dispatch(request: Request, full_path: str):
     fwd = {k: v for k, v in ((h, request.headers.get(h)) for h in route.forward) if v and k in ALLOWED_FORWARD}
     if body:
         fwd["content-type"] = "application/json"  # ya validado arriba; no se reenvía lo que diga el navegador
+    paso(f"gateway: enrutando {route.id} → {route.upstream} {request.method} {target} (clave de servicio edge/gateway__{route.upstream} desde el gestor de secretos)",
+         ruta_id=route.id, destino=route.upstream, ruta_interna=target)
     upstream = await SERVICES[route.upstream].araw(
         request.method, target, identity=ident if route.identity else None,
         content=body or None, params=query or None, headers=fwd, timeout=route.timeout)
     if upstream.status_code >= 500 and not _controlled_failure(upstream):
         raise ApiError(502, "upstream_error", "Un servicio interno falló.")
+    paso(f"gateway: {route.upstream} respondió {upstream.status_code} a {route.id}", ruta_id=route.id, destino=route.upstream, estado=upstream.status_code)
     out = Response(content=upstream.content, status_code=upstream.status_code,
                    media_type="application/json" if upstream.content else None)
     if route.auth == "session":
