@@ -1,0 +1,11 @@
+# Ajustes para ejecutar en GitHub Codespaces. Se usa junto al archivo principal:
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.codespaces.yml up --build
+# (scripts/codespaces.sh lo hace todo). El resto del despliegue es idéntico al local.
+services:
+  frontend:
+    command: ["sh", "-c", "a2enmod -q proxy proxy_http && exec apache2-foreground"]
+    volumes:
+      - ./frontend-proxy.conf:/etc/apache2/conf-enabled/lr-proxy.conf:ro
+    depends_on:
+      gateway:
+        condition: service_started

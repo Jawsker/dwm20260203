@@ -53,6 +53,12 @@ docker compose -f deploy/docker-compose.yml up --build
 # Sitio: http://localhost:8080      API: http://localhost:8000/api/v1
 ```
 
+**En GitHub Codespaces** (si tu Windows no admite Docker): en la página del repositorio pulsa **Code → Codespaces → Create codespace on main** y, en la terminal que se abre:
+```bash
+bash "Unidad 2/evaluacion2/scripts/codespaces.sh"
+```
+Levanta los mismos contenedores y muestra la dirección del sitio (pestaña **Ports**, puerto 8080). Allí el contenedor del sitio reenvía `/api/` al contenedor del gateway, porque Codespaces da a cada puerto un dominio distinto y el navegador bloquearía la cookie entre ellos.
+
 **Local por procesos, rápido** (base en memoria y secretos generados al arrancar):
 ```bash
 pip install -r apigateway/requirements.txt -r apigateway/requirements-dev.txt
