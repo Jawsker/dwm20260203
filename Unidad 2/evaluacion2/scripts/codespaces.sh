@@ -19,7 +19,10 @@ import sys, re, pathlib
 sitio = sys.argv[1]
 p = pathlib.Path("deploy/.env")
 s = p.read_text(encoding="utf-8")
-for clave, valor in {"LR_API_BASE": sitio, "LR_ALLOWED_ORIGINS": sitio, "LR_COOKIE_SECURE": "1"}.items():
+# El reenvío de puertos de Codespaces puede reescribir el encabezado Origin a localhost:8080; esas variantes solo
+# llegan a través del túnel autenticado de GitHub, así que se aceptan junto a la dirección pública.
+origenes = ",".join([sitio, "http://localhost:8080", "https://localhost:8080", "http://127.0.0.1:8080"])
+for clave, valor in {"LR_API_BASE": sitio, "LR_ALLOWED_ORIGINS": origenes, "LR_COOKIE_SECURE": "1"}.items():
     if re.search(rf"^{clave}=.*$", s, flags=re.M):
         s = re.sub(rf"^{clave}=.*$", f"{clave}={valor}", s, flags=re.M)
     else:
